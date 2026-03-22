@@ -1,0 +1,2299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0D0D0D">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>UpNext — Barber</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:             #061410;
+      --bg-2:           #111111;
+      --card:           #1A1A1A;
+      --card-2:         #222222;
+      --border:         rgba(255,255,255,0.08);
+      --accent:         #2ECC71;
+      --accent-dim:     rgba(46,204,113,0.15);
+      --accent-dark:    #1BA355;
+      --red:            #FF453A;
+      --red-dim:        rgba(255,69,58,0.15);
+      --text:           #FFFFFF;
+      --text-2:         rgba(255,255,255,0.6);
+      --text-3:         rgba(255,255,255,0.35);
+      --tab-h:          56px;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; -webkit-font-smoothing: antialiased; }
+
+    /* ── Utility ── */
+    .hidden  { display: none !important; }
+    .flex    { display: flex; }
+    .col     { flex-direction: column; }
+    .center  { align-items: center; justify-content: center; }
+    .gap-4   { gap: 4px; }
+    .gap-8   { gap: 8px; }
+    .gap-12  { gap: 12px; }
+    .gap-16  { gap: 16px; }
+
+    /* ── Scrollable page ── */
+    .page {
+      display: none;
+      min-height: 100vh;
+      flex-direction: column;
+      padding-bottom: calc(var(--tab-h) + 16px);
+    }
+    .page.active { display: flex; }
+
+    /* ── Loading ── */
+    #loading {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px; z-index: 999;
+    }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid rgba(46,204,113,0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Logo ── */
+    .logo { display: flex; align-items: center; gap: 8px; }
+    .logo-shapes { display: flex; flex-direction: column; gap: 4.5px; }
+    .logo-dot       { width: 7px;  height: 7px;  background: #2A4A35; border-radius: 50%; }
+    .logo-bar-wide  { width: 22px; height: 7px;  background: #2ECC71; border-radius: 2px; }
+    .logo-bar-short { width: 14px; height: 7px;  background: #2A4A35; border-radius: 2px; }
+    .logo-text { font-size: 17px; font-weight: 700; letter-spacing: -0.4px; }
+
+    /* ── Login ── */
+    #login-page {
+      min-height: 100vh; display: none;
+      flex-direction: column; padding: 0 24px;
+      padding-top: max(60px, env(safe-area-inset-top));
+    }
+    #login-page.active { display: flex; }
+
+    .login-header { margin-bottom: 40px; }
+    .login-title  { font-size: 30px; font-weight: 800; letter-spacing: -0.8px; margin-top: 24px; margin-bottom: 6px; }
+    .login-sub    { font-size: 15px; color: var(--text-2); }
+
+    .field-label {
+      font-size: 12px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--text-2); margin-bottom: 8px; display: block;
+    }
+    .field-wrap { margin-bottom: 16px; }
+    .field {
+      width: 100%; background: var(--card); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 15px 16px;
+      font-size: 16px; font-weight: 500; font-family: 'Outfit', sans-serif;
+      color: var(--text); outline: none; transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    .field:focus { border-color: var(--accent); }
+    .field::placeholder { color: var(--text-3); }
+
+    .btn {
+      width: 100%; background: var(--accent); color: #000;
+      border: none; border-radius: 14px; padding: 17px;
+      font-size: 16px; font-weight: 700; font-family: 'Outfit', sans-serif;
+      cursor: pointer; transition: background 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active   { background: var(--accent-dark); transform: scale(0.98); }
+    .btn:disabled { background: rgba(46,204,113,0.25); color: rgba(0,0,0,0.4); cursor: not-allowed; }
+    .btn-ghost {
+      width: 100%; background: var(--card); color: var(--text);
+      border: 1px solid var(--border); border-radius: 14px; padding: 15px;
+      font-size: 15px; font-weight: 600; font-family: 'Outfit', sans-serif;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .btn-sm {
+      background: var(--accent); color: #000;
+      border: none; border-radius: 10px; padding: 9px 16px;
+      font-size: 13px; font-weight: 700; font-family: 'Outfit', sans-serif;
+      cursor: pointer; white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-sm:active { background: var(--accent-dark); }
+    .btn-sm.ghost  { background: var(--card-2); color: var(--text); border: 1px solid var(--border); }
+    .btn-sm.red    { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,69,58,0.25); }
+
+    .error-msg { color: var(--red); font-size: 14px; margin-top: 8px; text-align: center; min-height: 20px; }
+
+    /* ── Top Nav ── */
+    .topnav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; padding-top: max(16px, env(safe-area-inset-top));
+      border-bottom: 1px solid var(--border);
+      background: var(--bg); position: sticky; top: 0; z-index: 10;
+    }
+    .topnav-title { font-size: 16px; font-weight: 700; }
+    .topnav-sub   { font-size: 12px; color: var(--text-2); margin-top: 1px; }
+
+    .avatar-btn {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--accent-dim); border: none; cursor: pointer;
+      font-size: 14px; font-weight: 700; color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── Bottom Tab Bar ── */
+    .tab-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: calc(var(--tab-h) + env(safe-area-inset-bottom));
+      background: var(--bg-2); border-top: 1px solid var(--border);
+      display: flex; align-items: flex-start; padding-top: 8px;
+      z-index: 10;
+    }
+    .tab-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+      cursor: pointer; padding: 4px 8px; -webkit-tap-highlight-color: transparent;
+    }
+    .tab-icon  { font-size: 20px; }
+    .tab-label { font-size: 10px; font-weight: 600; color: var(--text-3); transition: color 0.15s; }
+    .tab-item.active .tab-label { color: var(--accent); }
+    .tab-item.active .tab-icon  { filter: none; }
+
+    /* ── Section headers ── */
+    .section-hdr {
+      padding: 20px 20px 10px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.5px; color: var(--text-3);
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+    }
+    .card-padded { padding: 16px; }
+    .card-row {
+      display: flex; align-items: center;
+      padding: 14px 16px; gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-row:last-child { border-bottom: none; }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex; background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; margin: 0 16px 16px; overflow: hidden;
+    }
+    .stat-cell {
+      flex: 1; padding: 14px 8px; text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat-cell:last-child { border-right: none; }
+    .stat-val  { font-size: 24px; font-weight: 800; color: var(--text); }
+    .stat-lbl  { font-size: 11px; color: var(--text-2); margin-top: 2px; font-weight: 500; }
+    .stat-icon { font-size: 14px; margin-bottom: 2px; }
+
+    /* ── Go Live button ── */
+    .go-live-wrap { padding: 16px; }
+    .go-live-btn {
+      width: 100%; border: none; border-radius: 16px; padding: 18px;
+      font-size: 17px; font-weight: 800; font-family: 'Outfit', sans-serif;
+      cursor: pointer; transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .go-live-btn.live {
+      background: var(--accent); color: #000;
+    }
+    .go-live-btn.offline {
+      background: var(--card); color: var(--text-2);
+      border: 1px solid var(--border);
+    }
+    .go-live-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .go-live-btn.live .go-live-dot     { background: #000; }
+    .go-live-btn.offline .go-live-dot  { background: var(--text-3); animation: none; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.6; transform: scale(0.85); }
+    }
+
+    /* ── Taking Appointment pause button (shown when live) ── */
+    .appt-pause-btn {
+      width: 100%; border-radius: 12px; padding: 13px 16px; margin-top: 8px;
+      font-size: 13px; font-weight: 600; font-family: 'Outfit', sans-serif;
+      cursor: pointer; transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+      background: var(--card); color: var(--text-2);
+      border: 1px solid var(--border);
+    }
+    .appt-pause-btn:active { opacity: 0.7; }
+
+    /* ── Queue entry rows ── */
+    .queue-entry {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+    }
+    .queue-entry:last-child { border-bottom: none; }
+    .queue-pos {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: var(--card-2); display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: var(--text-2); flex-shrink: 0;
+    }
+    .queue-pos.first { background: var(--accent-dim); color: var(--accent); }
+    .queue-info { flex: 1; min-width: 0; }
+    .queue-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .queue-meta { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+    .queue-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+    /* ── Current client ── */
+    .current-client {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; margin: 0 16px; padding: 16px;
+    }
+    .current-name { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; }
+    .current-meta { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+    .current-timer { font-size: 13px; color: var(--accent); margin-top: 6px; font-weight: 600; }
+
+    /* ── Barber card (owner dashboard) ── */
+    .barber-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; margin: 0 16px 12px; overflow: hidden;
+    }
+    .barber-card-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+    }
+    .barber-initial {
+      width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700;
+    }
+    .barber-initial.live   { background: var(--accent-dim); color: var(--accent); }
+    .barber-initial.offline { background: var(--card-2); color: var(--text-3); }
+    .barber-hdr-info { flex: 1; }
+    .barber-hdr-name { font-size: 15px; font-weight: 700; }
+    .barber-hdr-meta { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+    .live-badge {
+      background: var(--accent-dim); color: var(--accent);
+      border: 1px solid rgba(46,204,113,0.3);
+      border-radius: 6px; padding: 3px 8px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+    }
+    .wait-badge {
+      background: var(--card-2); color: var(--text-2);
+      border-radius: 8px; padding: 4px 10px;
+      font-size: 12px; font-weight: 600;
+    }
+
+    /* ── Status dot ── */
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+      display: inline-block; margin-right: 5px;
+    }
+    .status-dot.available { background: var(--accent); }
+    .status-dot.break     { background: #FF9F0A; }
+    .status-dot.off       { background: var(--text-3); }
+
+    /* ── Settings ── */
+    .seg-ctrl {
+      display: flex; background: var(--card); border-radius: 12px; padding: 3px;
+      margin: 16px; gap: 2px;
+    }
+    .seg-btn {
+      flex: 1; padding: 10px; border: none; border-radius: 9px;
+      font-size: 14px; font-weight: 600; font-family: 'Outfit', sans-serif;
+      cursor: pointer; background: transparent; color: var(--text-2);
+      transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .seg-btn.active { background: var(--accent); color: #000; }
+
+    .settings-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-info { flex: 1; min-width: 0; }
+    .settings-name { font-size: 15px; font-weight: 600; }
+    .settings-meta { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+    .settings-actions { display: flex; gap: 8px; }
+
+    .icon-btn {
+      width: 34px; height: 34px; border-radius: 9px; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .icon-btn.edit   { background: rgba(46,204,113,0.12); color: var(--accent); }
+    .icon-btn.delete { background: rgba(255,69,58,0.12); color: var(--red); }
+
+    .active-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+    .inactive-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; }
+
+    /* ── Shop settings action buttons ── */
+    .shop-action-btn {
+      display: flex; align-items: center; gap: 14px;
+      width: calc(100% - 32px); margin: 0 16px 12px;
+      background: var(--card); border: 1.5px solid var(--border);
+      border-radius: 16px; padding: 18px 16px;
+      font-family: 'Outfit', sans-serif; cursor: pointer;
+      -webkit-tap-highlight-color: transparent; text-align: left;
+      transition: background 0.15s;
+    }
+    .shop-action-btn:active { background: var(--card-2); }
+    .shop-action-icon {
+      width: 42px; height: 42px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .shop-action-icon.green  { background: var(--accent-dim); }
+    .shop-action-icon.purple { background: rgba(162,89,255,0.15); }
+    .shop-action-label { font-size: 15px; font-weight: 700; color: var(--text); }
+    .shop-action-meta  { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+
+    /* ── Toggle switch (used for auto-close setting) ── */
+    .toggle-switch { position: relative; display: inline-block; width: 44px; height: 26px; cursor: pointer; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute; inset: 0; border-radius: 13px;
+      background: var(--card-2); border: 1px solid var(--border);
+      transition: background 0.2s;
+    }
+    .toggle-track::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--text-2); transition: all 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-track { background: var(--accent); border-color: var(--accent); }
+    .toggle-switch input:checked + .toggle-track::after { left: 21px; background: #000; }
+
+    /* ── QR sheet ── */
+    .qr-sheet-inner { display: flex; flex-direction: column; align-items: center; gap: 20px; padding-top: 4px; }
+    .qr-box {
+      background: #fff; border-radius: 20px;
+      padding: 20px; display: inline-flex;
+    }
+    .qr-sheet-label { font-size: 13px; color: var(--text-2); text-align: center; }
+    .qr-copy-btn {
+      width: 100%; background: var(--accent-dim); border: none;
+      border-radius: 14px; padding: 15px;
+      color: var(--accent); font-size: 15px; font-weight: 700;
+      font-family: 'Outfit', sans-serif; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .add-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: calc(100% - 32px); margin: 12px 16px;
+      background: var(--card); border: 1.5px dashed rgba(46,204,113,0.3);
+      border-radius: 14px; padding: 14px;
+      color: var(--accent); font-size: 14px; font-weight: 600;
+      font-family: 'Outfit', sans-serif; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── Modal / Sheet ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      display: flex; align-items: flex-end;
+      z-index: 100; opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-sheet {
+      width: 100%; background: var(--bg-2);
+      border-radius: 20px 20px 0 0;
+      padding: 20px 20px calc(32px + env(safe-area-inset-bottom));
+      transform: translateY(30px); transition: transform 0.25s;
+      max-height: 85vh; overflow-y: auto;
+    }
+    .modal-overlay.open .modal-sheet { transform: translateY(0); }
+    .modal-handle {
+      width: 36px; height: 4px; background: rgba(255,255,255,0.2);
+      border-radius: 2px; margin: 0 auto 20px;
+    }
+    .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 20px; }
+
+    /* ── Dropdown menu ── */
+    .dropdown {
+      position: fixed; top: 60px; right: 16px;
+      background: var(--card-2); border: 1px solid var(--border);
+      border-radius: 14px; padding: 6px; min-width: 180px;
+      z-index: 50; opacity: 0; pointer-events: none;
+      transform: translateY(-8px) scale(0.95);
+      transition: all 0.15s; transform-origin: top right;
+    }
+    .dropdown.open { opacity: 1; pointer-events: all; transform: translateY(0) scale(1); }
+    .dropdown-item {
+      padding: 12px 14px; border-radius: 9px; font-size: 14px; font-weight: 500;
+      cursor: pointer; display: flex; align-items: center; gap: 10px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .dropdown-item:hover { background: var(--card); }
+    .dropdown-item.danger { color: var(--red); }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center; padding: 48px 24px; color: var(--text-2);
+    }
+    .empty-icon  { font-size: 36px; margin-bottom: 12px; }
+    .empty-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+    .empty-sub   { font-size: 13px; }
+
+    /* ── Toggle switch ── */
+    .toggle-wrap { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; }
+    .toggle-label { font-size: 15px; font-weight: 600; }
+    .toggle {
+      width: 50px; height: 28px; border-radius: 14px; border: none; cursor: pointer;
+      transition: background 0.2s; position: relative; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .toggle.on  { background: var(--accent); }
+    .toggle.off { background: var(--card-2); }
+    .toggle::after {
+      content: ''; position: absolute;
+      width: 22px; height: 22px; border-radius: 50%; background: white;
+      top: 3px; transition: left 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+    .toggle.on::after  { left: 25px; }
+    .toggle.off::after { left: 3px; }
+
+    .type-badge {
+      background: var(--card-2); color: var(--text-2);
+      border-radius: 6px; padding: 3px 8px;
+      font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    /* ── Confirm dialog ── */
+    .confirm-dialog {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.15s;
+      padding: 24px;
+    }
+    .confirm-dialog.open { opacity: 1; pointer-events: all; }
+    .confirm-box {
+      background: var(--card); border-radius: 18px; padding: 24px;
+      width: 100%; max-width: 320px; text-align: center;
+    }
+    .confirm-title { font-size: 17px; font-weight: 800; margin-bottom: 8px; }
+    .confirm-msg   { font-size: 14px; color: var(--text-2); margin-bottom: 24px; line-height: 1.5; }
+    .confirm-btns  { display: flex; gap: 10px; }
+    .confirm-btns .btn { flex: 1; padding: 14px; font-size: 15px; }
+    .confirm-btns .btn.cancel-btn { background: var(--card-2); color: var(--text); }
+    .confirm-btns .btn.danger-btn { background: var(--red); color: white; }
+  
+    /* ── Toast notification ── */
+    .toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(30,30,30,0.95);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      pointer-events: none;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+</style>
+</head>
+<body>
+
+<!-- ═══ LOADING ═══ -->
+<div id="loading">
+  <div class="logo">
+    <div class="logo-shapes">
+      <div class="logo-dot"></div><div class="logo-bar-wide"></div><div class="logo-bar-short"></div>
+    </div>
+    <span class="logo-text">Up<span style="color:#8BA898;">Next</span></span>
+  </div>
+  <div class="spinner"></div>
+</div>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="login-page">
+  <div class="login-header">
+    <div class="logo">
+      <div class="logo-shapes">
+        <div class="logo-dot"></div><div class="logo-bar-wide"></div><div class="logo-bar-short"></div>
+      </div>
+      <span class="logo-text">Up<span style="color:#8BA898;">Next</span></span>
+    </div>
+    <div class="login-title">Welcome back.</div>
+    <div class="login-sub">Sign in to manage your queue.</div>
+  </div>
+
+  <div class="field-wrap">
+    <label class="field-label" for="email-input">Email</label>
+    <input class="field" id="email-input" type="email" placeholder="your@email.com" autocomplete="email" inputmode="email">
+  </div>
+  <div class="field-wrap">
+    <label class="field-label" for="pass-input">Password</label>
+    <input class="field" id="pass-input" type="password" placeholder="••••••••" autocomplete="current-password">
+  </div>
+  <div class="error-msg" id="login-error"></div>
+  <div style="margin-top:8px;">
+    <button class="btn" id="login-btn" onclick="signIn()">Sign In</button>
+  </div>
+  <div style="text-align:center; margin-top:20px; font-size:14px; color:var(--text-2);">
+    New here? <a href="/signup" style="color:var(--accent); text-decoration:none; font-weight:600;">Create your shop</a>
+  </div>
+</div>
+
+<!-- ═══ BARBER VIEW ═══ -->
+<div id="barber-page" class="page">
+  <!-- Top nav -->
+  <div class="topnav">
+    <div>
+      <div class="topnav-title" id="barber-nav-name">My Queue</div>
+      <div class="topnav-sub" id="barber-nav-stats"></div>
+    </div>
+    <button class="avatar-btn" id="barber-avatar-btn" onclick="toggleDropdown('barber-menu')">?</button>
+  </div>
+
+  <!-- Dropdown menu -->
+  <div class="dropdown" id="barber-menu">
+    <div class="dropdown-item" id="barber-menu-name" style="color:var(--text-2);cursor:default;font-size:13px;"></div>
+    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+    <div class="dropdown-item danger" onclick="confirmSignOut()">
+      <span>🚪</span> Sign Out
+    </div>
+  </div>
+
+  <!-- Availability section: main toggle + Taking Appointment quick-pause -->
+  <div class="go-live-wrap">
+    <button class="go-live-btn offline" id="go-live-btn" onclick="toggleGoLive()">
+      <div class="go-live-dot"></div>
+      <span id="go-live-label">Open for Walk-Ins</span>
+    </button>
+    <!-- "Taking Appointment" button — only visible when live; pauses walk-ins without full sign-out -->
+    <button class="appt-pause-btn hidden" id="appt-pause-btn" onclick="toggleGoLive()">
+      📅 Taking an Appointment — Pause Walk-Ins
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar" id="barber-stats-bar">
+    <div class="stat-cell">
+      <div class="stat-val" id="b-stat-waiting">0</div>
+      <div class="stat-lbl">Waiting</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val" id="b-stat-wait">~0m</div>
+      <div class="stat-lbl">Est. Wait</div>
+    </div>
+  </div>
+
+  <!-- Current client -->
+  <div id="current-section" class="hidden">
+    <div class="section-hdr">IN THE CHAIR</div>
+    <div class="current-client">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div style="flex:1;">
+          <div class="current-name" id="current-name">—</div>
+          <div class="current-meta" id="current-service">—</div>
+          <div class="current-timer" id="current-timer">0m in chair</div>
+        </div>
+        <button class="btn-sm" onclick="completeCurrent()">Mark Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Next Available pool — walk-ins with no barber preference -->
+  <div id="barber-pool-section" class="hidden">
+    <div class="section-hdr" style="color:var(--accent);">⚡ NEXT AVAILABLE</div>
+    <div class="card" style="margin:0 16px 4px;">
+      <div id="barber-pool-list"></div>
+    </div>
+  </div>
+
+  <!-- Full shop view — all barbers and their queues -->
+  <div class="section-hdr">BARBERS</div>
+  <div id="barber-all-list"></div>
+</div>
+
+<!-- ═══ OWNER VIEW ═══ -->
+<div id="owner-page" class="page">
+  <!-- Top nav -->
+  <div class="topnav">
+    <div>
+      <div class="topnav-title" id="owner-shop-name">Fademasters</div>
+      <div class="topnav-sub" style="color:var(--accent);font-weight:600;">Owner Dashboard</div>
+    </div>
+    <button class="avatar-btn" id="owner-avatar-btn" onclick="toggleDropdown('owner-menu')">?</button>
+  </div>
+
+  <!-- Owner dropdown -->
+  <div class="dropdown" id="owner-menu">
+    <div class="dropdown-item" id="owner-menu-name" style="color:var(--text-2);cursor:default;font-size:13px;"></div>
+    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+    <div class="dropdown-item danger" onclick="confirmSignOut()">
+      <span>🚪</span> Sign Out
+    </div>
+  </div>
+
+  <!-- Owner tab content — toggled by tab bar -->
+  <div id="owner-dashboard-tab">
+    <!-- Stats bar -->
+    <div class="stats-bar" style="margin-top:16px;">
+      <div class="stat-cell">
+        <div class="stat-icon">👥</div>
+        <div class="stat-val" id="o-stat-waiting">0</div>
+        <div class="stat-lbl">Waiting</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-icon">💈</div>
+        <div class="stat-val" id="o-stat-chair">0</div>
+        <div class="stat-lbl">In Chair</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-val" id="o-stat-live">0</div>
+        <div class="stat-lbl">Live</div>
+      </div>
+    </div>
+
+    <!-- No Preference pool -->
+    <div id="next-available-section" class="hidden">
+      <div class="section-hdr" style="color:var(--accent);">⚡ NEXT AVAILABLE POOL</div>
+      <div class="card" style="margin:0 16px 4px;">
+        <div id="next-available-list"></div>
+      </div>
+    </div>
+
+    <!-- Add Walk-in to Next Available — quick action button for owner -->
+    <div style="padding:0 16px 8px;display:flex;justify-content:flex-end;">
+      <button onclick="openAddToNextAvailable()" style="
+        display:flex;align-items:center;gap:6px;background:var(--accent);color:#0D0D0D;
+        border:none;border-radius:10px;padding:9px 16px;font-family:'Outfit',sans-serif;
+        font-size:13px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;
+      ">
+        <span style="font-size:16px;line-height:1;">+</span> Walk-in
+      </button>
+    </div>
+
+    <!-- Barbers list -->
+    <div class="section-hdr">BARBERS</div>
+    <div id="owner-barbers-list"></div>
+  </div>
+
+  <!-- Settings tab -->
+  <div id="owner-settings-tab" class="hidden">
+    <div class="seg-ctrl">
+      <button class="seg-btn active" id="seg-barbers" onclick="switchSeg('barbers')">👥 Barbers</button>
+      <button class="seg-btn" id="seg-services" onclick="switchSeg('services')">✂️ Services</button>
+      <button class="seg-btn" id="seg-shop" onclick="switchSeg('shop')">🏪 Shop</button>
+    </div>
+
+    <!-- Barbers settings -->
+    <div id="settings-barbers">
+      <div class="card" style="margin:0 16px;">
+        <div id="settings-barbers-list"></div>
+      </div>
+      <button class="add-btn" onclick="openAddBarber()">+ Add Barber</button>
+    </div>
+
+    <!-- Services settings -->
+    <div id="settings-services" class="hidden">
+      <div class="card" style="margin:0 16px;">
+        <div id="settings-services-list"></div>
+      </div>
+      <button class="add-btn" onclick="openAddService()">+ Add Service</button>
+    </div>
+
+    <!-- Shop settings -->
+    <div id="settings-shop" class="hidden" style="padding-top:12px;">
+      <button class="shop-action-btn" onclick="openQRSheet()">
+        <div class="shop-action-icon green">🔲</div>
+        <div>
+          <div class="shop-action-label">Check-In QR Code</div>
+          <div class="shop-action-meta">Show QR for customers to scan &amp; join the queue</div>
+        </div>
+      </button>
+      <button class="shop-action-btn" onclick="openLiveQueue()">
+        <div class="shop-action-icon purple">📺</div>
+        <div>
+          <div class="shop-action-label">View Live Queue</div>
+          <div class="shop-action-meta">Open your shop's TV display in a new tab</div>
+        </div>
+      </button>
+
+      <!-- Shop Code card -->
+      <div class="card" style="margin:0 16px 16px;padding:16px;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px;">🔑 Shop Code</div>
+        <div style="font-size:12px;color:var(--text-2);line-height:1.5;margin-bottom:12px;">
+          Share this code with your barbers so they can join at <strong style="color:var(--text);">upnext-app.com/join</strong>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div id="shop-code-display" style="
+            flex:1;background:var(--card-2);border:1px solid var(--border);
+            border-radius:10px;padding:12px 14px;font-size:15px;font-weight:600;
+            font-family:monospace;color:var(--accent);letter-spacing:0.5px;
+            overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+          ">Loading…</div>
+          <button onclick="copyShopCode()" id="copy-code-btn" style="
+            background:var(--accent);color:#0D0D0D;border:none;border-radius:10px;
+            padding:12px 16px;font-family:'Outfit',sans-serif;font-size:14px;
+            font-weight:600;cursor:pointer;white-space:nowrap;
+          ">Copy</button>
+        </div>
+      </div>
+
+      <!-- Auto-Close Time card -->
+      <div class="card" style="margin:0 16px 16px;padding:16px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:4px;">🌙 Auto-Close Time</div>
+            <div style="font-size:12px;color:var(--text-2);line-height:1.5;">
+              Every night at this time, all barbers go offline automatically. Barbers can still manage their own availability during the day.
+            </div>
+          </div>
+          <!-- Toggle -->
+          <label class="toggle-switch" style="flex-shrink:0;margin-top:2px;">
+            <input type="checkbox" id="auto-close-toggle" onchange="handleAutoCloseToggle(this.checked)">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <!-- Time picker — hidden until toggle is on -->
+        <div id="auto-close-time-row" class="hidden" style="display:none;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border);">
+          <div style="font-size:14px;color:var(--text);">Close at</div>
+          <input type="time" id="auto-close-time-input" value="21:00"
+            onchange="saveAutoCloseTime(this.value)"
+            style="background:var(--card-2);border:1px solid var(--border);border-radius:8px;
+                   color:var(--text);font-family:'Outfit',sans-serif;font-size:15px;
+                   font-weight:600;padding:8px 12px;cursor:pointer;">
+        </div>
+      </div>
+
+      <!-- Account — Reset Password card -->
+      <div class="card" style="margin:0 16px 16px;padding:0;overflow:hidden;">
+        <button onclick="ownerResetPassword()" style="
+          display:flex;align-items:center;gap:14px;width:100%;background:transparent;
+          border:none;padding:16px;cursor:pointer;-webkit-tap-highlight-color:transparent;
+          font-family:'Outfit',sans-serif;text-align:left;
+        ">
+          <div style="
+            width:36px;height:36px;border-radius:10px;background:rgba(46,204,113,0.1);
+            display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+          ">🔐</div>
+          <div style="flex:1;">
+            <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;">Reset Password</div>
+            <div style="font-size:12px;color:var(--text-2);">Send a reset link to your email</div>
+          </div>
+          <div style="color:var(--text-3);font-size:18px;">›</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Add to Next Available Modal -->
+  <div class="modal-overlay" id="add-next-modal">
+    <div class="modal-sheet" style="max-height:85vh;overflow-y:auto;">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Add Walk-in</div>
+
+      <!-- Info banner -->
+      <div style="
+        background:rgba(46,204,113,0.08);border-radius:10px;padding:12px;
+        display:flex;gap:10px;align-items:flex-start;margin-bottom:20px;
+      ">
+        <span style="font-size:14px;">⚡</span>
+        <div style="font-size:12px;color:var(--text-2);line-height:1.5;">
+          This client will go into the <strong style="color:var(--accent);">Next Available</strong> pool. Any barber can claim them.
+        </div>
+      </div>
+
+      <!-- Name field -->
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px;">Client Name</div>
+        <input id="next-available-name" type="text" placeholder="e.g. Marcus Johnson"
+          style="width:100%;background:var(--card-2);border:1.5px solid var(--border);
+            border-radius:12px;padding:13px 14px;color:var(--text);font-family:'Outfit',sans-serif;
+            font-size:15px;outline:none;box-sizing:border-box;" />
+      </div>
+
+      <!-- Phone field (optional) -->
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px;">Phone <span style="color:var(--text-3);font-weight:400;text-transform:none;">(optional)</span></div>
+        <input id="next-available-phone" type="tel" placeholder="e.g. 254-555-0100"
+          style="width:100%;background:var(--card-2);border:1.5px solid var(--border);
+            border-radius:12px;padding:13px 14px;color:var(--text);font-family:'Outfit',sans-serif;
+            font-size:15px;outline:none;box-sizing:border-box;" />
+      </div>
+
+      <!-- Service picker -->
+      <div style="margin-bottom:24px;">
+        <div style="font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px;">Service</div>
+        <div id="next-available-services" style="
+          background:var(--card-2);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;
+        ">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Submit button -->
+      <button id="next-available-submit-btn" onclick="submitAddToNextAvailable()" style="
+        width:100%;background:var(--accent);color:#0D0D0D;border:none;border-radius:14px;
+        padding:16px;font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;
+        cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+        -webkit-tap-highlight-color:transparent;
+      ">
+        <span>⚡</span> Add to Next Available
+      </button>
+      <button onclick="closeModal('add-next-modal')" style="
+        width:100%;background:transparent;color:var(--text-2);border:none;
+        padding:14px;font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;
+        margin-top:4px;
+      ">Cancel</button>
+    </div>
+  </div>
+
+  <!-- QR Code Modal -->
+  <div class="modal-overlay" id="qr-modal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Check-In QR Code</div>
+      <div class="qr-sheet-inner">
+        <div class="qr-box"><div id="owner-checkin-qr"></div></div>
+        <div class="qr-sheet-label" id="owner-qr-label">Loading…</div>
+        <button class="qr-copy-btn" onclick="copyCheckInLink()">Copy Check-In Link</button>
+        <button class="qr-copy-btn" style="background:var(--card);color:var(--text-2);margin-top:-8px;" onclick="closeModal('qr-modal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Owner tab bar -->
+  <div class="tab-bar" id="owner-tab-bar">
+    <div class="tab-item active" id="tab-dashboard" onclick="switchOwnerTab('dashboard')">
+      <div class="tab-icon">📊</div>
+      <div class="tab-label">Dashboard</div>
+    </div>
+    <div class="tab-item" id="tab-settings" onclick="switchOwnerTab('settings')">
+      <div class="tab-icon">⚙️</div>
+      <div class="tab-label">Settings</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADD/EDIT BARBER MODAL ═══ -->
+<div class="modal-overlay" id="barber-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="barber-modal-title">Add Barber</div>
+    <input type="hidden" id="edit-barber-id">
+
+    <!-- Photo upload -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+      <div id="barber-photo-preview" onclick="document.getElementById('barber-photo-input').click()" style="
+        width:56px;height:56px;border-radius:50%;
+        background:var(--surface-2);border:2px dashed var(--border);
+        display:flex;align-items:center;justify-content:center;
+        cursor:pointer;overflow:hidden;flex-shrink:0;transition:border-color 0.2s;
+      ">
+        <span id="barber-photo-placeholder" style="font-size:22px;">📷</span>
+        <img id="barber-photo-img" style="display:none;width:100%;height:100%;object-fit:cover;" />
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;">Photo</div>
+        <div style="font-size:12px;color:var(--text-2);">Tap to upload · JPG or PNG</div>
+      </div>
+      <input type="file" id="barber-photo-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="previewBarberPhoto(this)">
+    </div>
+
+    <div class="field-wrap">
+      <label class="field-label">Name</label>
+      <input class="field" id="barber-name-input" type="text" placeholder="Full name" autocapitalize="words">
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">Email</label>
+      <input class="field" id="barber-email-input" type="email" placeholder="barber@email.com" inputmode="email">
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">Type</label>
+      <select class="field" id="barber-type-input" style="cursor:pointer;">
+        <option value="walkin">Walk-In</option>
+        <option value="hybrid">Hybrid (Walk-In + Appointments)</option>
+        <option value="appointment_only">Appointment Only</option>
+      </select>
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">Booking Link <span style="color:var(--text-3);font-weight:400;">(optional)</span></label>
+      <input class="field" id="barber-booking-input" type="url" placeholder="https://square.com/appointments/..." inputmode="url">
+    </div>
+    <div style="margin-top:8px;display:flex;gap:10px;">
+      <button class="btn-ghost" onclick="closeModal('barber-modal')" style="flex:1;">Cancel</button>
+      <button class="btn" id="save-barber-btn" onclick="saveBarber()" style="flex:2;">Save Barber</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADD/EDIT SERVICE MODAL ═══ -->
+<div class="modal-overlay" id="service-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="service-modal-title">Add Service</div>
+    <input type="hidden" id="edit-service-id">
+    <div class="field-wrap">
+      <label class="field-label">Service Name</label>
+      <input class="field" id="service-name-input" type="text" placeholder="e.g. Fade" autocapitalize="words">
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">Duration (minutes)</label>
+      <input class="field" id="service-duration-input" type="number" placeholder="30" inputmode="numeric">
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">Price (optional)</label>
+      <input class="field" id="service-price-input" type="number" placeholder="$30" inputmode="decimal">
+    </div>
+    <div style="margin-top:8px;display:flex;gap:10px;">
+      <button class="btn-ghost" onclick="closeModal('service-modal')" style="flex:1;">Cancel</button>
+      <button class="btn" onclick="saveService()" style="flex:2;">Save Service</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CONFIRM DIALOG ═══ -->
+<div class="confirm-dialog" id="confirm-dialog">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title">Are you sure?</div>
+    <div class="confirm-msg" id="confirm-msg"></div>
+    <div class="confirm-btns">
+      <button class="btn cancel-btn" onclick="closeConfirm()">Cancel</button>
+      <button class="btn danger-btn" id="confirm-action-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ ADD MANUAL ENTRY MODAL ═══ -->
+<div class="modal-overlay" id="manual-entry-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add to Queue</div>
+    <input type="hidden" id="manual-entry-barber-id">
+    <div class="field-wrap">
+      <label class="field-label">Customer Name</label>
+      <input class="field" id="manual-entry-name" type="text" placeholder="e.g. Appointment, John D." autocapitalize="words">
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">Status</label>
+      <select class="field" id="manual-entry-status" style="cursor:pointer;">
+        <option value="waiting">Waiting — holds a spot in line</option>
+        <option value="in_chair">In Chair — currently being served</option>
+      </select>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:10px;">
+      <button class="btn-ghost" onclick="closeModal('manual-entry-modal')" style="flex:1;">Cancel</button>
+      <button class="btn" onclick="saveManualEntry()" style="flex:2;">Add to Queue</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MOVE CLIENT MODAL ═══ -->
+<div class="modal-overlay" id="move-entry-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="move-entry-title">Move Client</div>
+    <input type="hidden" id="move-entry-id">
+    <div style="font-size:13px;color:var(--text-2);margin-bottom:16px;">Pick a barber to move this client to:</div>
+    <div id="move-barber-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <div style="margin-top:16px;">
+      <button class="btn-ghost" onclick="closeModal('move-entry-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ JAVASCRIPT ═══ -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordReset
+} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import {
+  getFirestore,
+  doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
+  collection, onSnapshot,
+  query, where, orderBy, serverTimestamp, deleteField
+} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import {
+  getStorage, ref as storageRef, uploadBytes, getDownloadURL
+} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js';
+
+// ── Config ──────────────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyAcCSUMXGSndEb9LmRBysTe-Rnbj6Z7O7Q",
+  authDomain:        "upnext-4ec7a.firebaseapp.com",
+  projectId:         "upnext-4ec7a",
+  storageBucket:     "upnext-4ec7a.firebasestorage.app",
+  messagingSenderId: "828337578393",
+  appId:             "1:828337578393:web:41ffba3eae692c9d807308"
+};
+
+const app     = initializeApp(firebaseConfig);
+const auth    = getAuth(app);
+const db      = getFirestore(app);
+const storage = getStorage(app);
+
+// ── State ────────────────────────────────────────────────────────────────────
+let appUser       = null;
+let barberDoc     = null;
+let shopId        = null;
+let allBarbers    = [];
+let allQueue      = [];
+let allServices   = [];
+let unsubscribers = [];
+let timerInterval = null;
+let currentStartTime = null;
+
+// ── Auth state ───────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    showView('login');
+    return;
+  }
+  try {
+    const userSnap = await getDoc(doc(db, 'users', user.uid));
+    if (!userSnap.exists()) { await signOut(auth); showView('login'); return; }
+
+    appUser = { uid: user.uid, ...userSnap.data() };
+    shopId  = appUser.shopId;
+    renderShopCode(); // Populate the shop code display in Settings
+
+    if (appUser.role === 'owner') {
+      await loadOwnerView();
+    } else {
+      await loadBarberView();
+    }
+  } catch (e) {
+    console.error(e);
+    showView('login');
+  }
+});
+
+// ── Sign in ───────────────────────────────────────────────────────────────────
+window.signIn = async function() {
+  const email = document.getElementById('email-input').value.trim();
+  const pass  = document.getElementById('pass-input').value;
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-error');
+
+  err.textContent = '';
+  btn.disabled    = true;
+  btn.textContent = 'Signing in...';
+
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (e) {
+    btn.disabled    = false;
+    btn.textContent = 'Sign In';
+    const msgs = {
+      'auth/invalid-email':       'Invalid email address.',
+      'auth/user-not-found':      'No account found with this email.',
+      'auth/wrong-password':      'Incorrect password.',
+      'auth/invalid-credential':  'Incorrect email or password.',
+      'auth/too-many-requests':   'Too many attempts. Try again later.',
+    };
+    err.textContent = msgs[e.code] || 'Something went wrong. Please try again.';
+  }
+};
+
+// ── Sign out ──────────────────────────────────────────────────────────────────
+window.confirmSignOut = function() {
+  showConfirm('Sign Out', 'Are you sure you want to sign out?', 'Sign Out', async () => {
+    clearListeners();
+    await signOut(auth);
+    showView('login');
+  });
+};
+
+// ── BARBER VIEW ───────────────────────────────────────────────────────────────
+async function loadBarberView() {
+  // Find the barber doc linked to this user
+  if (appUser.barberId) {
+    const bSnap = await getDoc(doc(db, 'shops', shopId, 'barbers', appUser.barberId));
+    if (bSnap.exists()) barberDoc = { id: bSnap.id, ...bSnap.data() };
+  }
+
+  if (!barberDoc) {
+    // Try to find by email
+    const q = query(collection(db, 'shops', shopId, 'barbers'), where('email', '==', appUser.email));
+    const snap = await getDocs(q);
+    if (!snap.empty) barberDoc = { id: snap.docs[0].id, ...snap.docs[0].data() };
+  }
+
+  if (!barberDoc) { showView('login'); return; }
+
+  // Set up barber header
+  const name = barberDoc.name || 'My Queue';
+  document.getElementById('barber-nav-name').textContent = name;
+  document.getElementById('barber-avatar-btn').textContent = name.charAt(0).toUpperCase();
+  document.getElementById('barber-menu-name').textContent  = name;
+
+  showView('barber');
+  startBarberListeners();
+}
+
+function startBarberListeners() {
+  clearListeners();
+
+  // Own barber doc — for goLive toggle and status
+  const u1 = onSnapshot(doc(db, 'shops', shopId, 'barbers', barberDoc.id), snap => {
+    if (!snap.exists()) return;
+    barberDoc = { id: snap.id, ...snap.data() };
+    renderGoLive();
+  });
+
+  // All barbers — so we can show the full shop view
+  const u2 = onSnapshot(collection(db, 'shops', shopId, 'barbers'), snap => {
+    allBarbers = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+    renderBarberDashboard();
+  });
+
+  // Full shop queue — filter + sort client-side to avoid composite index requirement
+  const u3 = onSnapshot(collection(db, 'shops', shopId, 'queue'), snap => {
+    allQueue = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(e => ['waiting', 'notified', 'in_chair'].includes(e.status))
+      .sort((a, b) => (a.checkInTime?.toMillis?.() ?? 0) - (b.checkInTime?.toMillis?.() ?? 0));
+    renderBarberDashboard();
+  }, err => {
+    console.error('Queue listener error:', err);
+  });
+
+  // Load services once
+  getDocs(collection(db, 'shops', shopId, 'services')).then(snap => {
+    allServices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  });
+
+  // Check auto-close timer — takes this barber offline at the shop's configured close time
+  scheduleAutoClose();
+
+  unsubscribers.push(u1, u2, u3);
+}
+
+function renderGoLive() {
+  const btn       = document.getElementById('go-live-btn');
+  const label     = document.getElementById('go-live-label');
+  const pauseBtn  = document.getElementById('appt-pause-btn');
+  const isLive    = barberDoc.goLive === true;
+
+  btn.className       = `go-live-btn ${isLive ? 'live' : 'offline'}`;
+  label.textContent   = isLive ? '● Available for Walk-Ins — Tap to Pause' : 'Open for Walk-Ins';
+
+  // Only show the "Taking Appointment" quick-pause button when live
+  pauseBtn.classList.toggle('hidden', !isLive);
+}
+
+function renderBarberDashboard() {
+  // ── Own queue stats ──────────────────────────────────────────────────────────
+  const myQueue   = allQueue.filter(e => e.barberId === barberDoc.id);
+  const myWaiting = myQueue.filter(e => e.status === 'waiting' || e.status === 'notified');
+  const myInChair = myQueue.find(e => e.status === 'in_chair');
+  const avgTime   = barberDoc?.avgServiceTime ?? 30;
+
+  document.getElementById('b-stat-waiting').textContent = myWaiting.length;
+  document.getElementById('b-stat-wait').textContent    = `~${myWaiting.length * avgTime}m`;
+  document.getElementById('barber-nav-stats').textContent =
+    myWaiting.length > 0 ? `${myWaiting.length} waiting · ~${myWaiting.length * avgTime}m` : 'Queue empty';
+
+  // ── Own current client (in-chair section + timer) ────────────────────────────
+  const curSection = document.getElementById('current-section');
+  if (myInChair) {
+    curSection.classList.remove('hidden');
+    document.getElementById('current-name').textContent    = myInChair.customerName;
+    document.getElementById('current-service').textContent = serviceName(myInChair.serviceId);
+    currentStartTime = myInChair.startTime?.toDate?.() ?? new Date();
+    startTimer();
+    window._currentEntry = myInChair;
+  } else {
+    curSection.classList.add('hidden');
+    stopTimer();
+    window._currentEntry = null;
+  }
+
+  // ── Next Available pool ──────────────────────────────────────────────────────
+  const poolEntries = allQueue.filter(e =>
+    (e.barberId === '__next__' || e.noPreference) &&
+    (e.status === 'waiting' || e.status === 'notified')
+  );
+  const poolSection = document.getElementById('barber-pool-section');
+  const poolList    = document.getElementById('barber-pool-list');
+
+  if (poolEntries.length > 0) {
+    poolSection.classList.remove('hidden');
+    poolList.innerHTML = poolEntries.map(entry => `
+      <div class="queue-entry">
+        <div class="queue-pos" style="background:var(--accent-dim);border-color:rgba(46,204,113,0.3);color:var(--accent);">⚡</div>
+        <div class="queue-info">
+          <div class="queue-name">${entry.customerName}</div>
+          <div class="queue-meta">${serviceName(entry.serviceId)}</div>
+        </div>
+        <div class="queue-actions">
+          <button class="btn-sm" onclick="claimPoolEntry('${entry.id}', '${entry.customerName.replace(/'/g, "\\'")}')">Claim</button>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    poolSection.classList.add('hidden');
+  }
+
+  // ── All barbers ──────────────────────────────────────────────────────────────
+  const container = document.getElementById('barber-all-list');
+  container.innerHTML = '';
+
+  allBarbers.forEach(barber => {
+    const isMe     = barber.id === barberDoc.id;
+    const bQueue   = allQueue.filter(e => e.barberId === barber.id);
+    const bWaiting = bQueue.filter(e => e.status === 'waiting' || e.status === 'notified');
+    const bInChair = bQueue.find(e => e.status === 'in_chair');
+    const isLive   = barber.goLive === true;
+    const bAvg     = barber.avgServiceTime ?? 30;
+
+    const card = document.createElement('div');
+    card.className = 'barber-card';
+    // Subtle green outline on the logged-in barber's own card
+    if (isMe) card.style.cssText += 'border:1px solid rgba(46,204,113,0.3);';
+
+    // Build waiting rows — own card gets action buttons, others are read-only
+    let waitingHTML = '';
+    bWaiting.forEach((entry, i) => {
+      const isFirst = i === 0 && !bInChair;
+      if (isMe) {
+        waitingHTML += `
+          <div class="queue-entry">
+            <div class="queue-pos ${isFirst ? 'first' : ''}">${i + 1}</div>
+            <div class="queue-info">
+              <div class="queue-name">${entry.customerName}</div>
+              <div class="queue-meta">${serviceName(entry.serviceId)} · ~${i * bAvg}m wait</div>
+            </div>
+            <div class="queue-actions">
+              ${isFirst ? `<button class="btn-sm" onclick="startEntry('${entry.id}')">Start</button>` : ''}
+              <button class="btn-sm ghost" onclick="removeEntry('${entry.id}', '${entry.customerName}')">✕</button>
+            </div>
+          </div>`;
+      } else {
+        // Read-only for other barbers
+        waitingHTML += `
+          <div class="queue-entry">
+            <div class="queue-pos">${i + 1}</div>
+            <div class="queue-info">
+              <div class="queue-name">${entry.customerName}</div>
+              <div class="queue-meta">${serviceName(entry.serviceId)}</div>
+            </div>
+          </div>`;
+      }
+    });
+
+    card.innerHTML = `
+      <div class="barber-card-header">
+        ${barber.photoUrl
+          ? `<img src="${barber.photoUrl}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ${isLive ? 'var(--accent)' : 'transparent'};" />`
+          : `<div class="barber-initial ${isLive ? 'live' : 'offline'}">${barber.name.charAt(0).toUpperCase()}</div>`
+        }
+        <div class="barber-hdr-info">
+          <div class="barber-hdr-name">
+            <span class="status-dot ${barber.status === 'available' ? 'available' : barber.status === 'on_break' ? 'break' : 'off'}"></span>
+            ${barber.name}
+            ${isMe ? `<span style="font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-dim);padding:2px 8px;border-radius:20px;margin-left:6px;">you</span>` : ''}
+          </div>
+          <div class="barber-hdr-meta">${bWaiting.length} waiting${bInChair ? ' · 1 in chair' : ''}</div>
+        </div>
+        <div style="padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;flex-shrink:0;
+          background:${isLive ? 'var(--accent)' : 'var(--card-2)'};
+          color:${isLive ? '#0D0D0D' : 'var(--text-2)'};
+          border:1px solid ${isLive ? 'transparent' : 'var(--border)'};">
+          ${isLive ? '● Live' : 'Offline'}
+        </div>
+      </div>
+
+      ${bInChair ? `
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px;">In Chair</div>
+            <div style="font-size:15px;font-weight:600;">${bInChair.customerName}</div>
+            <div style="font-size:12px;color:var(--text-2);">${serviceName(bInChair.serviceId)}</div>
+          </div>
+        </div>` : ''}
+
+      ${waitingHTML || `<div style="padding:16px;font-size:13px;color:var(--text-3);text-align:center;">No one waiting</div>`}
+
+      ${isMe ? `
+        <div style="padding:10px 16px;border-top:1px solid var(--border);">
+          <button onclick="openBarberAddEntry()" style="
+            width:100%; background:transparent; border:1.5px dashed rgba(46,204,113,0.3);
+            border-radius:10px; padding:9px; color:var(--accent);
+            font-size:13px; font-weight:600; font-family:'Outfit',sans-serif;
+            cursor:pointer; -webkit-tap-highlight-color:transparent;
+          ">+ Add Appointment</button>
+        </div>` : ''}
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+// ── OWNER VIEW ────────────────────────────────────────────────────────────────
+async function loadOwnerView() {
+  const shopSnap = await getDoc(doc(db, 'shops', shopId));
+  const shopName = shopSnap.exists() ? shopSnap.data().name : 'Dashboard';
+
+  document.getElementById('owner-shop-name').textContent  = shopName;
+  document.getElementById('owner-avatar-btn').textContent = (appUser.displayName || 'O').charAt(0).toUpperCase();
+  document.getElementById('owner-menu-name').textContent  = appUser.displayName || appUser.email;
+
+  showView('owner');
+  startOwnerListeners();
+}
+
+function startOwnerListeners() {
+  clearListeners();
+
+  // All barbers
+  const u1 = onSnapshot(collection(db, 'shops', shopId, 'barbers'), snap => {
+    allBarbers = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+    renderOwnerDashboard();
+    renderSettingsBarbers();
+  });
+
+  // Full queue
+  const u2 = onSnapshot(
+    query(collection(db, 'shops', shopId, 'queue'),
+      where('status', 'in', ['waiting', 'notified', 'in_chair']),
+      orderBy('checkInTime', 'asc')),
+    snap => {
+      allQueue = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderOwnerDashboard();
+    }
+  );
+
+  // Services
+  const u3 = onSnapshot(collection(db, 'shops', shopId, 'services'), snap => {
+    allServices = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+    renderSettingsServices();
+  });
+
+  unsubscribers.push(u1, u2, u3);
+
+  // Load auto-close setting so the shop settings tab shows the correct state
+  loadAutoCloseSettings();
+}
+
+function renderOwnerDashboard() {
+  const waiting = allQueue.filter(e => e.status === 'waiting' || e.status === 'notified').length;
+  const inChair = allQueue.filter(e => e.status === 'in_chair').length;
+  const live    = allBarbers.filter(b => b.goLive).length;
+
+  document.getElementById('o-stat-waiting').textContent = waiting;
+  document.getElementById('o-stat-chair').textContent   = inChair;
+  document.getElementById('o-stat-live').textContent    = live;
+
+  // ── No Preference pool ──────────────────────────────────────────────────────
+  const poolEntries = allQueue.filter(e =>
+    (e.barberId === '__next__' || e.noPreference) &&
+    (e.status === 'waiting' || e.status === 'notified')
+  );
+  const poolSection = document.getElementById('next-available-section');
+  const poolList    = document.getElementById('next-available-list');
+  if (poolEntries.length > 0) {
+    poolSection.classList.remove('hidden');
+    poolList.innerHTML = '';
+    poolEntries.forEach(entry => {
+      const row = document.createElement('div');
+      row.className = 'queue-entry';
+      const liveBarbers = allBarbers.filter(b => b.goLive);
+      const assignOptions = liveBarbers.map(b =>
+        `<button class="btn-sm" style="margin:2px 4px 2px 0;" onclick="assignNextEntry('${entry.id}','${b.id}')">→ ${b.name}</button>`
+      ).join('');
+      row.innerHTML = `
+        <div class="queue-pos" style="background:var(--accent-dim);border-color:rgba(46,204,113,0.3);color:var(--accent);">⚡</div>
+        <div class="queue-info">
+          <div class="queue-name">${entry.customerName}</div>
+          <div class="queue-meta" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:0;">${assignOptions || '<span style="color:var(--text-3);font-size:12px;">No barbers live</span>'}</div>
+        </div>
+        <div class="queue-actions">
+          <button class="btn-sm ghost" onclick="removeEntry('${entry.id}', '${entry.customerName}')">✕</button>
+        </div>`;
+      poolList.appendChild(row);
+    });
+  } else {
+    poolSection.classList.add('hidden');
+  }
+
+  const container = document.getElementById('owner-barbers-list');
+  container.innerHTML = '';
+
+  allBarbers.forEach(barber => {
+    const barberQueue  = allQueue.filter(e => e.barberId === barber.id);
+    const barberWaiting = barberQueue.filter(e => e.status === 'waiting' || e.status === 'notified');
+    const current       = barberQueue.find(e => e.status === 'in_chair');
+    const isLive        = barber.goLive === true;
+    const avgTime       = barber.avgServiceTime ?? 30;
+
+    const card = document.createElement('div');
+    card.className = 'barber-card';
+
+    let waitingHTML = '';
+    barberWaiting.slice(0, 3).forEach((entry, i) => {
+      const isFirst = i === 0 && !current;
+      waitingHTML += `
+        <div class="queue-entry">
+          <div class="queue-pos ${isFirst ? 'first' : ''}">${i + 1}</div>
+          <div class="queue-info">
+            <div class="queue-name">${entry.customerName}</div>
+            <div class="queue-meta">${serviceName(entry.serviceId)}</div>
+          </div>
+          <div class="queue-actions">
+            ${isFirst ? `<button class="btn-sm" onclick="ownerStartEntry('${barber.id}', '${entry.id}')">Start</button>` : ''}
+            <button class="btn-sm ghost" onclick="openMoveEntry('${entry.id}', '${entry.customerName}', '${barber.id}')" title="Move to another barber">⇄</button>
+            <button class="btn-sm ghost" onclick="removeEntry('${entry.id}', '${entry.customerName}')">✕</button>
+          </div>
+        </div>`;
+    });
+
+    if (barberWaiting.length > 3) {
+      waitingHTML += `<div style="padding:10px 16px;font-size:12px;color:var(--text-3);">and ${barberWaiting.length - 3} more...</div>`;
+    }
+
+    card.innerHTML = `
+      <div class="barber-card-header">
+        ${barber.photoUrl
+          ? `<img src="${barber.photoUrl}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ${isLive ? 'var(--accent)' : 'transparent'};" />`
+          : `<div class="barber-initial ${isLive ? 'live' : 'offline'}">${barber.name.charAt(0).toUpperCase()}</div>`
+        }
+        <div class="barber-hdr-info">
+          <div class="barber-hdr-name">
+            <span class="status-dot ${barber.status === 'available' ? 'available' : barber.status === 'on_break' ? 'break' : 'off'}"></span>
+            ${barber.name}
+          </div>
+          <div class="barber-hdr-meta">${barberWaiting.length} waiting</div>
+        </div>
+        <button onclick="toggleBarberLive('${barber.id}', ${isLive})" style="
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-family: 'Outfit', sans-serif;
+          font-size: 12px;
+          font-weight: 700;
+          border: none;
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: all 0.2s;
+          background: ${isLive ? 'var(--accent)' : 'var(--card-2)'};
+          color: ${isLive ? '#0D0D0D' : 'var(--text-2)'};
+          border: 1px solid ${isLive ? 'transparent' : 'var(--border)'};
+        ">${isLive ? '● Available' : 'Not Taking Walk-Ins'}</button>
+      </div>
+      ${current ? `
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px;">In Chair</div>
+            <div style="font-size:15px;font-weight:600;">${current.customerName}</div>
+            <div style="font-size:12px;color:var(--text-2);">${serviceName(current.serviceId)}</div>
+          </div>
+          <button class="btn-sm" onclick="ownerCompleteEntry('${barber.id}', '${current.id}')">Done ✓</button>
+        </div>` : ''}
+      ${waitingHTML || (barberWaiting.length === 0 ? `<div style="padding:16px;font-size:13px;color:var(--text-3);text-align:center;">No one waiting</div>` : '')}
+      <div style="padding:10px 16px;border-top:1px solid var(--border);">
+        <button onclick="openAddManualEntry('${barber.id}', '${barber.name}')" style="
+          width:100%; background:transparent; border:1.5px dashed rgba(46,204,113,0.3);
+          border-radius:10px; padding:9px; color:var(--accent);
+          font-size:13px; font-weight:600; font-family:'Outfit',sans-serif;
+          cursor:pointer; -webkit-tap-highlight-color:transparent;
+        ">+ Add to Queue</button>
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+function renderSettingsBarbers() {
+  const list = document.getElementById('settings-barbers-list');
+  list.innerHTML = '';
+
+  if (allBarbers.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No barbers yet</div></div>`;
+    return;
+  }
+
+  allBarbers.forEach((barber, idx) => {
+    const typeLabels = { walkin: 'Walk-In', hybrid: 'Hybrid', appointment_only: 'Appt Only' };
+    const isFirst = idx === 0;
+    const isLast  = idx === allBarbers.length - 1;
+    const row = document.createElement('div');
+    row.className = 'settings-row';
+    row.innerHTML = `
+      ${barber.photoUrl
+        ? `<img src="${barber.photoUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ${barber.goLive ? 'var(--accent)' : 'transparent'};" />`
+        : `<div class="barber-initial ${barber.goLive ? 'live' : 'offline'}" style="width:32px;height:32px;font-size:13px;flex-shrink:0;">${barber.name.charAt(0).toUpperCase()}</div>`
+      }
+      <div class="settings-info">
+        <div class="settings-name">${barber.name}</div>
+        <div class="settings-meta">
+          <span class="type-badge">${typeLabels[barber.barberType] || barber.barberType || 'Walk-In'}</span>
+          ${barber.goLive ? ' · <span style="color:var(--accent);font-weight:600;">Available</span>' : ''}
+        </div>
+      </div>
+      <div class="settings-actions" style="gap:4px;">
+        <button class="icon-btn" onclick="moveBarberOrder('${barber.id}', -1)"
+          style="opacity:${isFirst ? 0.25 : 1};pointer-events:${isFirst ? 'none' : 'auto'};"
+          title="Move up">↑</button>
+        <button class="icon-btn" onclick="moveBarberOrder('${barber.id}', 1)"
+          style="opacity:${isLast ? 0.25 : 1};pointer-events:${isLast ? 'none' : 'auto'};"
+          title="Move down">↓</button>
+        <button class="icon-btn edit"   onclick="openEditBarber('${barber.id}')">✏️</button>
+        <button class="icon-btn delete" onclick="deleteBarberConfirm('${barber.id}', '${barber.name}')">🗑️</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+// Swap the order of a barber with its neighbor (direction: -1 = up, 1 = down)
+window.moveBarberOrder = async function(barberId, direction) {
+  const idx = allBarbers.findIndex(b => b.id === barberId);
+  if (idx === -1) return;
+  const swapIdx = idx + direction;
+  if (swapIdx < 0 || swapIdx >= allBarbers.length) return;
+
+  const barberA = allBarbers[idx];
+  const barberB = allBarbers[swapIdx];
+
+  // Assign clean order values based on their current positions, then swap
+  const orderA = idx;
+  const orderB = swapIdx;
+
+  await Promise.all([
+    updateDoc(doc(db, 'shops', shopId, 'barbers', barberA.id), { order: orderB }),
+    updateDoc(doc(db, 'shops', shopId, 'barbers', barberB.id), { order: orderA }),
+  ]);
+  // Firestore listener will re-render automatically
+};
+
+function renderSettingsServices() {
+  const list = document.getElementById('settings-services-list');
+  list.innerHTML = '';
+
+  if (allServices.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">✂️</div><div class="empty-title">No services yet</div></div>`;
+    return;
+  }
+
+  allServices.forEach(service => {
+    const isActive = service.active !== false;
+    const row = document.createElement('div');
+    row.className = 'settings-row';
+    row.innerHTML = `
+      <div class="${isActive ? 'active-dot' : 'inactive-dot'}"></div>
+      <div class="settings-info">
+        <div class="settings-name">${service.name}</div>
+        <div class="settings-meta">~${service.estimatedMinutes ?? 30}m${service.price ? ` · $${service.price}` : ''}</div>
+      </div>
+      <div class="settings-actions">
+        <button class="icon-btn edit"   onclick="openEditService('${service.id}')">✏️</button>
+        <button class="icon-btn delete" onclick="deleteServiceConfirm('${service.id}', '${service.name}')">🗑️</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+// ── QUEUE ACTIONS ─────────────────────────────────────────────────────────────
+window.toggleGoLive = async function() {
+  if (!barberDoc) return;
+  const newVal = !barberDoc.goLive;
+  await updateDoc(doc(db, 'shops', shopId, 'barbers', barberDoc.id), { goLive: newVal });
+};
+
+window.startEntry = async function(entryId) {
+  await updateDoc(doc(db, 'shops', shopId, 'queue', entryId), {
+    status: 'in_chair',
+    startTime: serverTimestamp(),
+  });
+  if (barberDoc) {
+    await updateDoc(doc(db, 'shops', shopId, 'barbers', barberDoc.id), { currentClientId: entryId });
+  }
+};
+
+// Claim a next-available walk-in — assigns them to the logged-in barber's queue
+window.claimPoolEntry = function(entryId, clientName) {
+  showConfirm(
+    '⚡ Claim Walk-In',
+    `Only claim ${clientName} if you're ready for them RIGHT NOW. They'll move to your queue immediately.`,
+    'Yes, Claim Them',
+    async () => {
+      await updateDoc(doc(db, 'shops', shopId, 'queue', entryId), {
+        barberId: barberDoc.id,
+      });
+    }
+  );
+};
+
+window.completeCurrent = async function() {
+  const entry = window._currentEntry;
+  if (!entry) return;
+  showConfirm('Mark Done', `Mark ${entry.customerName} as done?`, 'Done ✓', async () => {
+    await updateDoc(doc(db, 'shops', shopId, 'queue', entry.id), {
+      status: 'completed', endTime: serverTimestamp()
+    });
+    if (barberDoc) {
+      await updateDoc(doc(db, 'shops', shopId, 'barbers', barberDoc.id), { currentClientId: null });
+    }
+  });
+};
+
+window.assignNextEntry = async function(entryId, barberId) {
+  const barber = allBarbers.find(b => b.id === barberId);
+  if (!barber) return;
+  await updateDoc(doc(db, 'shops', shopId, 'queue', entryId), {
+    barberId: barberId,
+    assignedBarberId: barberId,
+    noPreference: false
+  });
+};
+
+// ── MANUAL ENTRY (owner adds placeholder / appointment client) ─────────────────
+// Barber view shortcut — uses the logged-in barber's own ID/name
+window.openBarberAddEntry = function() {
+  if (barberDoc) openAddManualEntry(barberDoc.id, barberDoc.name);
+};
+
+window.openAddManualEntry = function(barberId, barberName) {
+  document.getElementById('manual-entry-barber-id').value = barberId;
+  document.getElementById('manual-entry-name').value      = '';
+  document.getElementById('manual-entry-status').value    = 'waiting';
+  document.querySelector('#manual-entry-modal .modal-title').textContent = `Add to ${barberName}'s Queue`;
+  openModal('manual-entry-modal');
+};
+
+window.saveManualEntry = async function() {
+  const barberId = document.getElementById('manual-entry-barber-id').value;
+  const name     = document.getElementById('manual-entry-name').value.trim() || 'Appointment';
+  const status   = document.getElementById('manual-entry-status').value;
+
+  // Count current queue position for this barber
+  const barberQueue = allQueue.filter(e => e.barberId === barberId);
+  const position    = barberQueue.length + 1;
+
+  const entry = {
+    customerName:         name,
+    customerPhone:        '',
+    barberId:             barberId,
+    serviceId:            '',
+    status:               status,
+    position:             position,
+    checkInTime:          serverTimestamp(),
+    estimatedWaitMinutes: 0,
+    noPreference:         false,
+    isManual:             true,   // flag so we know this was owner-added
+    notifiedAlmostUp:     false,
+    notifiedYoureUp:      false,
+    checkedInViaWeb:      false,
+  };
+
+  // If putting them in the chair, also set startTime
+  if (status === 'in_chair') {
+    entry.startTime = serverTimestamp();
+  }
+
+  const newDocRef = await addDoc(collection(db, 'shops', shopId, 'queue'), entry);
+
+  // If in_chair, link this entry to the barber's currentClientId
+  if (status === 'in_chair') {
+    await updateDoc(doc(db, 'shops', shopId, 'barbers', barberId), { currentClientId: newDocRef.id });
+  }
+
+  closeModal('manual-entry-modal');
+};
+
+// ── MOVE CLIENT (owner reassigns a waiting client to a different barber) ───────
+window.openMoveEntry = function(entryId, clientName, currentBarberId) {
+  document.getElementById('move-entry-id').value = entryId;
+  document.getElementById('move-entry-title').textContent = `Move ${clientName}`;
+
+  // Build the list of other barbers to move to
+  const list = document.getElementById('move-barber-list');
+  list.innerHTML = '';
+
+  const otherBarbers = allBarbers.filter(b => b.id !== currentBarberId);
+  if (otherBarbers.length === 0) {
+    list.innerHTML = `<div style="color:var(--text-3);font-size:14px;text-align:center;padding:16px;">No other barbers available.</div>`;
+  } else {
+    otherBarbers.forEach(barber => {
+      const queueCount = allQueue.filter(e =>
+        e.barberId === barber.id && (e.status === 'waiting' || e.status === 'notified')
+      ).length;
+      const btn = document.createElement('button');
+      btn.style.cssText = `
+        display:flex; align-items:center; justify-content:space-between;
+        width:100%; background:var(--card); border:1.5px solid var(--border);
+        border-radius:12px; padding:14px 16px; cursor:pointer;
+        font-family:'Outfit',sans-serif; -webkit-tap-highlight-color:transparent;
+        transition:border-color 0.15s;
+      `;
+      btn.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--card-2);
+            display:flex;align-items:center;justify-content:center;
+            font-size:13px;font-weight:700;color:var(--accent);">
+            ${barber.name.charAt(0).toUpperCase()}
+          </div>
+          <div style="text-align:left;">
+            <div style="font-size:15px;font-weight:600;color:var(--text);">${barber.name}</div>
+            <div style="font-size:12px;color:var(--text-2);">${queueCount} waiting</div>
+          </div>
+        </div>
+        <span style="color:var(--accent);font-size:18px;">→</span>
+      `;
+      btn.onclick = () => moveEntry(entryId, barber.id, barber.name, clientName);
+      list.appendChild(btn);
+    });
+  }
+
+  openModal('move-entry-modal');
+};
+
+window.moveEntry = async function(entryId, newBarberId, barberName, clientName) {
+  await updateDoc(doc(db, 'shops', shopId, 'queue', entryId), {
+    barberId:         newBarberId,
+    assignedBarberId: newBarberId,
+    noPreference:     false,
+  });
+  closeModal('move-entry-modal');
+};
+
+window.removeEntry = function(entryId, name) {
+  showConfirm('Remove from Queue', `Remove ${name} from the queue?`, 'Remove', async () => {
+    await updateDoc(doc(db, 'shops', shopId, 'queue', entryId), { status: 'removed' });
+  });
+};
+
+
+// ── OWNER RESET PASSWORD ──────────────────────────────────────────────────────
+window.ownerResetPassword = async function() {
+  const user = auth.currentUser;
+  if (!user?.email) {
+    showToast('No email found for this account.');
+    return;
+  }
+  showConfirm('Reset Password', `Send a password reset link to ${user.email}?`, 'Send Email', async () => {
+    try {
+      await sendPasswordReset(auth, user.email);
+      showToast('✓ Reset email sent — check your inbox.');
+    } catch (err) {
+      showToast('Could not send reset email. Try again.');
+    }
+  });
+};
+
+// ── ADD TO NEXT AVAILABLE (owner dashboard quick-add) ─────────────────────────
+window.openAddToNextAvailable = function() {
+  // Clear previous inputs
+  document.getElementById('next-available-name').value  = '';
+  document.getElementById('next-available-phone').value = '';
+
+  // Populate service list from allServices
+  const container = document.getElementById('next-available-services');
+  container.innerHTML = '';
+  let selectedServiceId = null;
+
+  if (!allServices || allServices.length === 0) {
+    container.innerHTML = '<div style="padding:14px;font-size:13px;color:var(--text-3);">No services found.</div>';
+  } else {
+    allServices.forEach((svc, i) => {
+      const row = document.createElement('div');
+      row.id = `nxt-svc-${svc.id}`;
+      row.style.cssText = `
+        display:flex;align-items:center;justify-content:space-between;
+        padding:13px 14px;cursor:pointer;
+        ${i < allServices.length - 1 ? 'border-bottom:1px solid var(--border);' : ''}
+      `;
+      row.innerHTML = `
+        <span style="font-size:15px;font-weight:500;color:var(--text);">${svc.name}</span>
+        <span id="nxt-svc-check-${svc.id}" style="color:var(--accent);font-size:16px;display:none;">✓</span>
+      `;
+      row.onclick = () => {
+        // Deselect previous
+        if (selectedServiceId) {
+          document.getElementById(`nxt-svc-check-${selectedServiceId}`).style.display = 'none';
+          document.getElementById(`nxt-svc-${selectedServiceId}`).style.background = '';
+        }
+        selectedServiceId = svc.id;
+        document.getElementById(`nxt-svc-check-${svc.id}`).style.display = 'inline';
+        row.style.background = 'rgba(46,204,113,0.06)';
+        // Store on the submit button for retrieval
+        document.getElementById('next-available-submit-btn').dataset.serviceId = svc.id;
+      };
+      container.appendChild(row);
+    });
+  }
+
+  openModal('add-next-modal');
+};
+
+window.submitAddToNextAvailable = async function() {
+  const name      = document.getElementById('next-available-name').value.trim();
+  const phone     = document.getElementById('next-available-phone').value.trim();
+  const serviceId = document.getElementById('next-available-submit-btn').dataset.serviceId || '';
+
+  if (!name) { showToast('Please enter a client name.'); return; }
+  if (!serviceId) { showToast('Please select a service.'); return; }
+
+  const totalWaiting = allQueue.filter(e => e.status === 'waiting' || e.status === 'notified').length;
+
+  const entry = {
+    customerName:         name,
+    customerPhone:        phone,
+    barberId:             '__next__',   // Routes to next available pool
+    assignedBarberId:     null,
+    serviceId:            serviceId,
+    status:               'waiting',
+    position:             totalWaiting + 1,
+    checkInTime:          serverTimestamp(),
+    estimatedWaitMinutes: 0,
+    noPreference:         true,         // No specific barber preference
+    isManual:             true,
+    notifiedAlmostUp:     false,
+    notifiedYoureUp:      false,
+    checkedInViaWeb:      false,
+  };
+
+  try {
+    await addDoc(collection(db, 'shops', shopId, 'queue'), entry);
+    closeModal('add-next-modal');
+    showToast(`✓ ${name} added to Next Available pool.`);
+  } catch (err) {
+    showToast('Could not add walk-in. Try again.');
+  }
+};
+
+window.toggleBarberLive = async function(barberId, currentlyLive) {
+  await updateDoc(doc(db, 'shops', shopId, 'barbers', barberId), {
+    goLive: !currentlyLive
+  });
+};
+
+window.ownerStartEntry = async function(barberId, entryId) {
+  await updateDoc(doc(db, 'shops', shopId, 'queue', entryId), {
+    status: 'in_chair', startTime: serverTimestamp()
+  });
+  await updateDoc(doc(db, 'shops', shopId, 'barbers', barberId), { currentClientId: entryId });
+};
+
+window.ownerCompleteEntry = function(barberId, entryId) {
+  const entry = allQueue.find(e => e.id === entryId);
+  const name  = entry?.customerName ?? 'this client';
+  showConfirm('Mark Done', `Mark ${name} as done?`, 'Done ✓', async () => {
+    await updateDoc(doc(db, 'shops', shopId, 'queue', entryId), {
+      status: 'completed', endTime: serverTimestamp()
+    });
+    await updateDoc(doc(db, 'shops', shopId, 'barbers', barberId), { currentClientId: null });
+  });
+};
+
+// ── AUTO-CLOSE TIMER ──────────────────────────────────────────────────────────
+
+// Barber-side: Check the shop's autoCloseTime and schedule a timeout.
+// Each barber's browser tab only takes THAT barber offline —
+// global close is handled by the owner's "Close All" action (closeAllBarbers).
+let autoCloseTimeout = null;
+
+async function scheduleAutoClose() {
+  try {
+    const shopSnap = await getDoc(doc(db, 'shops', shopId));
+    if (!shopSnap.exists()) return;
+    const timeStr = shopSnap.data()?.settings?.autoCloseTime;
+    if (!timeStr) return;  // Auto-close not configured
+
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const now = new Date();
+    const closeDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
+
+    if (closeDate <= now) {
+      // Already past close time — go offline immediately if still live
+      if (barberDoc?.goLive) {
+        await updateDoc(doc(db, 'shops', shopId, 'barbers', barberDoc.id), { goLive: false });
+      }
+    } else {
+      // Schedule for later
+      clearTimeout(autoCloseTimeout);
+      autoCloseTimeout = setTimeout(async () => {
+        if (barberDoc?.goLive) {
+          await updateDoc(doc(db, 'shops', shopId, 'barbers', barberDoc.id), { goLive: false });
+        }
+      }, closeDate - now);
+    }
+  } catch (e) {
+    console.warn('Auto-close check failed:', e);
+  }
+}
+
+// Owner-side: Load autoCloseTime from Firestore and populate the settings UI
+async function loadAutoCloseSettings() {
+  try {
+    const shopSnap = await getDoc(doc(db, 'shops', shopId));
+    if (!shopSnap.exists()) return;
+    const timeStr = shopSnap.data()?.settings?.autoCloseTime;
+    const toggle  = document.getElementById('auto-close-toggle');
+    const timeRow = document.getElementById('auto-close-time-row');
+    const input   = document.getElementById('auto-close-time-input');
+    if (!toggle || !timeRow || !input) return;
+
+    if (timeStr) {
+      toggle.checked = true;
+      input.value    = timeStr;
+      timeRow.style.display = 'flex';
+      timeRow.classList.remove('hidden');
+    } else {
+      toggle.checked = false;
+      timeRow.style.display = 'none';
+    }
+  } catch (e) {
+    console.warn('loadAutoCloseSettings failed:', e);
+  }
+}
+
+// Toggle the auto-close feature on/off
+window.handleAutoCloseToggle = async function(enabled) {
+  const timeRow = document.getElementById('auto-close-time-row');
+  const input   = document.getElementById('auto-close-time-input');
+  if (enabled) {
+    timeRow.style.display = 'flex';
+    timeRow.classList.remove('hidden');
+    await saveAutoCloseTime(input?.value || '21:00');
+  } else {
+    timeRow.style.display = 'none';
+    // Write null to Firestore to disable auto-close
+    const shopSnap = await getDoc(doc(db, 'shops', shopId));
+    if (!shopSnap.exists()) return;
+    const settings = shopSnap.data()?.settings ?? {};
+    await updateDoc(doc(db, 'shops', shopId), {
+      'settings.autoCloseTime': deleteField()
+    });
+  }
+};
+
+// Save the selected close time to Firestore
+window.saveAutoCloseTime = async function(timeStr) {
+  try {
+    await updateDoc(doc(db, 'shops', shopId), {
+      'settings.autoCloseTime': timeStr
+    });
+  } catch (e) {
+    console.warn('saveAutoCloseTime failed:', e);
+  }
+};
+
+// ── SETTINGS ACTIONS ──────────────────────────────────────────────────────────
+function resetBarberPhoto() {
+  document.getElementById('barber-photo-input').value    = '';
+  document.getElementById('barber-photo-img').src        = '';
+  document.getElementById('barber-photo-img').style.display        = 'none';
+  document.getElementById('barber-photo-placeholder').style.display = 'block';
+}
+
+function setBarberPhotoPreview(url) {
+  const img = document.getElementById('barber-photo-img');
+  const placeholder = document.getElementById('barber-photo-placeholder');
+  img.src = url;
+  img.style.display = 'block';
+  placeholder.style.display = 'none';
+}
+
+window.previewBarberPhoto = function(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => setBarberPhotoPreview(e.target.result);
+  reader.readAsDataURL(input.files[0]);
+};
+
+window.openAddBarber = function() {
+  document.getElementById('barber-modal-title').textContent = 'Add Barber';
+  document.getElementById('edit-barber-id').value           = '';
+  document.getElementById('barber-name-input').value        = '';
+  document.getElementById('barber-email-input').value       = '';
+  document.getElementById('barber-type-input').value        = 'walkin';
+  document.getElementById('barber-booking-input').value     = '';
+  resetBarberPhoto();
+  openModal('barber-modal');
+};
+
+window.openEditBarber = function(id) {
+  const b = allBarbers.find(b => b.id === id);
+  if (!b) return;
+  document.getElementById('barber-modal-title').textContent = 'Edit Barber';
+  document.getElementById('edit-barber-id').value           = id;
+  document.getElementById('barber-name-input').value        = b.name || '';
+  document.getElementById('barber-email-input').value       = b.email || '';
+  document.getElementById('barber-type-input').value        = b.barberType || 'walkin';
+  document.getElementById('barber-booking-input').value     = b.bookingUrl || '';
+  if (b.photoUrl) {
+    setBarberPhotoPreview(b.photoUrl);
+  } else {
+    resetBarberPhoto();
+  }
+  openModal('barber-modal');
+};
+
+window.saveBarber = async function() {
+  const id         = document.getElementById('edit-barber-id').value;
+  const name       = document.getElementById('barber-name-input').value.trim();
+  const email      = document.getElementById('barber-email-input').value.trim();
+  const type       = document.getElementById('barber-type-input').value;
+  const bookingUrl = document.getElementById('barber-booking-input').value.trim();
+  if (!name) return;
+
+  // Show loading state
+  const saveBtn = document.getElementById('save-barber-btn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving…';
+
+  try {
+    // Upload photo if a new file was selected
+    let photoUrl = null;
+    const fileInput = document.getElementById('barber-photo-input');
+    if (fileInput.files && fileInput.files[0]) {
+      const file     = fileInput.files[0];
+      const barberId = id || `new-${Date.now()}`;
+      const photoRef = storageRef(storage, `shops/${shopId}/barbers/${barberId}/photo`);
+      await uploadBytes(photoRef, file);
+      photoUrl = await getDownloadURL(photoRef);
+    }
+
+    if (id) {
+      const updates = { name, email, barberType: type, bookingUrl };
+      if (photoUrl) updates.photoUrl = photoUrl;
+      await updateDoc(doc(db, 'shops', shopId, 'barbers', id), updates);
+    } else {
+      const data = {
+        name, email, barberType: type, bookingUrl, goLive: false,
+        status: 'available', order: allBarbers.length
+      };
+      if (photoUrl) data.photoUrl = photoUrl;
+      await addDoc(collection(db, 'shops', shopId, 'barbers'), data);
+    }
+    closeModal('barber-modal');
+  } catch (err) {
+    console.error('Save barber error:', err);
+    alert('Something went wrong saving the barber. Please try again.');
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save Barber';
+  }
+};
+
+window.deleteBarberConfirm = function(id, name) {
+  showConfirm('Delete Barber', `Remove ${name} from the shop? This cannot be undone.`, 'Delete', async () => {
+    await deleteDoc(doc(db, 'shops', shopId, 'barbers', id));
+  });
+};
+
+window.openAddService = function() {
+  document.getElementById('service-modal-title').textContent = 'Add Service';
+  document.getElementById('edit-service-id').value           = '';
+  document.getElementById('service-name-input').value        = '';
+  document.getElementById('service-duration-input').value    = '';
+  document.getElementById('service-price-input').value       = '';
+  openModal('service-modal');
+};
+
+window.openEditService = function(id) {
+  const s = allServices.find(s => s.id === id);
+  if (!s) return;
+  document.getElementById('service-modal-title').textContent = 'Edit Service';
+  document.getElementById('edit-service-id').value           = id;
+  document.getElementById('service-name-input').value        = s.name || '';
+  document.getElementById('service-duration-input').value    = s.estimatedMinutes || '';
+  document.getElementById('service-price-input').value       = s.price || '';
+  openModal('service-modal');
+};
+
+window.saveService = async function() {
+  const id       = document.getElementById('edit-service-id').value;
+  const name     = document.getElementById('service-name-input').value.trim();
+  const duration = parseInt(document.getElementById('service-duration-input').value) || 30;
+  const price    = parseFloat(document.getElementById('service-price-input').value) || null;
+  if (!name) return;
+
+  const data = { name, estimatedMinutes: duration, active: true };
+  if (price) data.price = price;
+
+  if (id) {
+    await updateDoc(doc(db, 'shops', shopId, 'services', id), data);
+  } else {
+    await addDoc(collection(db, 'shops', shopId, 'services'), { ...data, order: allServices.length });
+  }
+  closeModal('service-modal');
+};
+
+window.deleteServiceConfirm = function(id, name) {
+  showConfirm('Delete Service', `Remove "${name}" from the menu?`, 'Delete', async () => {
+    await deleteDoc(doc(db, 'shops', shopId, 'services', id));
+  });
+};
+
+// ── TIMER ─────────────────────────────────────────────────────────────────────
+function startTimer() {
+  stopTimer();
+  timerInterval = setInterval(() => {
+    if (!currentStartTime) return;
+    const mins = Math.floor((Date.now() - currentStartTime.getTime()) / 60000);
+    const secs = Math.floor(((Date.now() - currentStartTime.getTime()) % 60000) / 1000);
+    document.getElementById('current-timer').textContent = `${mins}m ${secs}s in chair`;
+  }, 1000);
+}
+function stopTimer() { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function serviceName(id) {
+  return allServices.find(s => s.id === id)?.name ?? '—';
+}
+
+function clearListeners() {
+  unsubscribers.forEach(u => u());
+  unsubscribers = [];
+  stopTimer();
+}
+
+function showView(view) {
+  document.getElementById('loading').style.display    = 'none';
+  document.getElementById('login-page').classList.toggle('active',  view === 'login');
+  document.getElementById('barber-page').classList.toggle('active', view === 'barber');
+  document.getElementById('owner-page').classList.toggle('active',  view === 'owner');
+
+  if (view === 'login') {
+    document.getElementById('login-btn').disabled    = false;
+    document.getElementById('login-btn').textContent = 'Sign In';
+  }
+}
+
+// ── TAB & SEG SWITCHING ───────────────────────────────────────────────────────
+window.switchOwnerTab = function(tab) {
+  document.getElementById('owner-dashboard-tab').classList.toggle('hidden', tab !== 'dashboard');
+  document.getElementById('owner-settings-tab').classList.toggle('hidden',  tab !== 'settings');
+  document.getElementById('tab-dashboard').classList.toggle('active', tab === 'dashboard');
+  document.getElementById('tab-settings').classList.toggle('active',  tab === 'settings');
+};
+
+window.switchSeg = function(seg) {
+  document.getElementById('settings-barbers').classList.toggle('hidden',  seg !== 'barbers');
+  document.getElementById('settings-services').classList.toggle('hidden', seg !== 'services');
+  document.getElementById('settings-shop').classList.toggle('hidden',     seg !== 'shop');
+  document.getElementById('seg-barbers').classList.toggle('active',  seg === 'barbers');
+  document.getElementById('seg-services').classList.toggle('active', seg === 'services');
+  document.getElementById('seg-shop').classList.toggle('active',     seg === 'shop');
+};
+
+// ── SHOP ACTIONS ──────────────────────────────────────────────────────────────
+let qrGenerated = false;
+window.openQRSheet = function() {
+  openModal('qr-modal');
+  if (!shopId || qrGenerated) return;
+  qrGenerated = true;
+  const url = `https://upnext-app.com/checkin?shop=${shopId}`;
+  new QRCode(document.getElementById('owner-checkin-qr'), {
+    text: url, width: 220, height: 220,
+    colorDark: '#000000', colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+  document.getElementById('owner-qr-label').textContent = url;
+};
+
+window.openLiveQueue = function() {
+  if (!shopId) return;
+  window.open(`https://upnext-app.com/queue?shop=${shopId}`, '_blank');
+};
+
+// Populate shop code display once shopId is available
+function renderShopCode() {
+  const el = document.getElementById('shop-code-display');
+  if (el && shopId) el.textContent = shopId;
+}
+
+window.copyShopCode = function() {
+  if (!shopId) return;
+  navigator.clipboard.writeText(shopId).then(() => {
+    const btn = document.getElementById('copy-code-btn');
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1800);
+  });
+};
+
+window.copyCheckInLink = function() {
+  if (!shopId) return;
+  const url = `https://upnext-app.com/checkin?shop=${shopId}`;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.querySelector('.qr-copy-btn');
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1800);
+  });
+};
+
+// ── DROPDOWN ──────────────────────────────────────────────────────────────────
+window.toggleDropdown = function(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+  const close = e => { if (!el.contains(e.target)) { el.classList.remove('open'); document.removeEventListener('click', close); }};
+  setTimeout(() => document.addEventListener('click', close), 10);
+};
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+window.closeModal = id  => document.getElementById(id).classList.remove('open');
+
+// ── CONFIRM DIALOG ────────────────────────────────────────────────────────────
+let confirmCallback = null;
+
+function showToast(msg, duration = 2800) {
+  const el = document.getElementById('toast-msg');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function showConfirm(title, msg, actionLabel, cb) {
+  document.getElementById('confirm-title').textContent     = title;
+  document.getElementById('confirm-msg').textContent       = msg;
+  document.getElementById('confirm-action-btn').textContent = actionLabel;
+  confirmCallback = cb;
+  document.getElementById('confirm-dialog').classList.add('open');
+}
+window.closeConfirm = function() { document.getElementById('confirm-dialog').classList.remove('open'); confirmCallback = null; };
+document.getElementById('confirm-action-btn').onclick = async function() {
+  if (confirmCallback) await confirmCallback();
+  window.closeConfirm();
+};
+
+// Handle keyboard enter on login
+document.getElementById('pass-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') window.signIn();
+});
+</script>
+
+  <div class="toast" id="toast-msg"></div>
+</body>
+</html>
