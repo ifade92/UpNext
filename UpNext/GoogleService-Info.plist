@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_KEY</key>
+	<string>AIzaSyAcCSUMXGSndEb9LmRBysTe-Rnbj6Z7O7Q</string>
+	<key>GCM_SENDER_ID</key>
+	<string>828337578393</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.carlos.upnext.UpNext</string>
+	<key>PROJECT_ID</key>
+	<string>upnext-4ec7a</string>
+	<key>STORAGE_BUCKET</key>
+	<string>upnext-4ec7a.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:828337578393:ios:a7f9ee01457389dd807308</string>
+</dict>
+</plist>
