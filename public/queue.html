@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Queue — UpNext</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Lucide Icons — replaces all emoji throughout the app -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #061410;
+      --surface:    #1A1A1A;
+      --surface-2:  #222222;
+      --accent:     #2ECC71;
+      --accent-dim: rgba(46,204,113,0.12);
+      --text:       #FFFFFF;
+      --text-2:     rgba(255,255,255,0.6);
+      --text-3:     rgba(255,255,255,0.3);
+      --border:     rgba(255,255,255,0.08);
+      --gold:       #F4C430;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* overflow:hidden moved to #main-screen so mobile view can scroll */
+    }
+
+    /* TV/kiosk view — no scrolling */
+    #main-screen {
+      overflow: hidden;
+    }
+
+    /* ── Layout ── */
+    .screen {
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 48px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-shapes { display: flex; flex-direction: column; gap: 4px; }
+    .logo-dot       { width: 16px; height: 16px; background: #2A4A35; border-radius: 50%; }
+    .logo-bar-wide  { width: 34px; height: 6px;  background: #2ECC71; border-radius: 2px; }
+    .logo-bar-short { width: 22px; height: 6px;  background: #2A4A35; border-radius: 2px; }
+    .logo-text { font-size: 32px; font-weight: 800; letter-spacing: -0.6px; }
+
+    .header-center {
+      text-align: center;
+    }
+
+    .shop-name {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .header-stats {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      justify-content: center;
+    }
+
+    .stat-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 18px;
+      color: var(--text-2);
+      font-weight: 500;
+    }
+
+    .stat-chip.green {
+      background: var(--accent-dim);
+      border-color: rgba(46,204,113,0.2);
+      color: var(--accent);
+    }
+
+    .clock {
+      font-size: 30px;
+      font-weight: 600;
+      color: var(--text-2);
+      letter-spacing: -0.3px;
+      min-width: 130px;
+      text-align: right;
+    }
+
+    /* ── Main content ── */
+    .content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    /* ── Check-In QR panel ── */
+    .checkin-panel {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      padding: 40px;
+    }
+
+    .checkin-eyebrow {
+      font-size: 18px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--text-3);
+    }
+
+    .checkin-headline {
+      font-size: 60px;
+      font-weight: 900;
+      color: var(--text);
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      text-align: center;
+    }
+
+    .checkin-headline span { color: var(--accent); }
+
+    .checkin-sub {
+      font-size: 24px;
+      color: var(--text-2);
+      font-weight: 500;
+      text-align: center;
+    }
+
+    .qr-wrapper {
+      background: #fff;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 24px 48px rgba(0,0,0,0.5);
+    }
+
+    /* ── Up Next panel title ── */
+    .panel-title {
+      font-size: 18px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-3);
+      margin-bottom: 24px;
+    }
+
+    /* ── Up Next panel ── */
+    .up-next {
+      padding: 32px 40px;
+      overflow-y: auto;
+    }
+
+    .queue-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+      animation: fadeSlideIn 0.4s ease;
+    }
+
+    .queue-row:last-child { border-bottom: none; }
+
+    .queue-pos {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-2);
+      flex-shrink: 0;
+    }
+
+    .queue-pos.next {
+      background: rgba(244,196,48,0.15);
+      border-color: rgba(244,196,48,0.3);
+      color: var(--gold);
+    }
+
+    .queue-info { flex: 1; min-width: 0; }
+
+    .queue-name {
+      font-size: 30px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .queue-name.next-up { color: var(--gold); }
+
+    .queue-barber-pill {
+      font-size: 16px;
+      font-weight: 600;
+      padding: 7px 16px;
+      border-radius: 100px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .queue-barber-pill.next-available {
+      background: var(--accent-dim);
+      border-color: rgba(46,204,113,0.25);
+      color: var(--accent);
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 12px;
+      color: var(--text-3);
+    }
+
+    .empty-icon { font-size: 64px; opacity: 0.4; }
+    .empty-text { font-size: 24px; font-weight: 500; }
+
+    /* ── Footer ── */
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px 48px;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .footer-text {
+      font-size: 16px;
+      color: var(--text-3);
+      font-weight: 500;
+    }
+
+    /* ── Error screen ── */
+    #error-screen {
+      display: none;
+      height: 100vh;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      text-align: center;
+      padding: 40px;
+    }
+
+    #error-screen.visible { display: flex; }
+    #error-screen .icon { font-size: 48px; }
+    #error-screen h2 { font-size: 24px; font-weight: 700; }
+    #error-screen p { font-size: 15px; color: var(--text-2); }
+
+    /* ── Animations ── */
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* Icon baseline alignment */
+    .ico { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+    .ico svg { display: block; }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* Live barber panel styles */
+    .barber-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      animation: fadeSlideIn 0.3s ease;
+    }
+    .barber-card:last-child { border-bottom: none; }
+    .barber-avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      object-fit: cover; object-position: top;
+      flex-shrink: 0;
+    }
+    .barber-avatar-initial {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700;
+      color: rgba(255,255,255,0.5);
+      flex-shrink: 0;
+    }
+    .barber-name { font-size: 16px; font-weight: 700; }
+    .barber-status-badge {
+      margin-left: auto;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+      padding: 4px 10px; border-radius: 20px;
+      text-transform: uppercase; flex-shrink: 0;
+    }
+    .badge-live {
+      background: rgba(46,204,113,0.12);
+      color: var(--accent);
+      border: 1px solid rgba(46,204,113,0.25);
+    }
+    .badge-busy {
+      background: rgba(244,196,48,0.12);
+      color: var(--gold);
+      border: 1px solid rgba(244,196,48,0.25);
+    }
+
+    /* Fade transition when switching modes */
+    .checkin-eyebrow,
+    .checkin-headline,
+    .checkin-sub {
+      transition: opacity 0.4s ease;
+    }
+
+    /* ── Mobile spot tracker (shown when ?entry= param is present) ── */
+    #mobile-view {
+      display: none;
+      min-height: 100vh;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 0 20px calc(60px + env(safe-area-inset-bottom));
+      padding-top: max(48px, env(safe-area-inset-top));
+      background: var(--bg);
+      /* Allow scrolling on mobile — body overflow:hidden only affects #main-screen */
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #mobile-view.active { display: flex; }
+
+    .spot-logo { margin-bottom: 24px; display:flex; align-items:center; gap:8px; }
+    .spot-logo-text { font-size:20px; font-weight:800; letter-spacing:-0.4px; }
+
+    /* Info card: name + barber + notification message */
+    .spot-card {
+      width:100%; background:var(--surface);
+      border:1px solid var(--border); border-radius:20px;
+      padding:20px 24px; margin-bottom:16px;
+    }
+    .spot-name {
+      font-size:22px; font-weight:800; letter-spacing:-0.4px; margin-bottom:4px;
+    }
+    .spot-detail { font-size:14px; color:var(--text-2); margin-bottom:14px; }
+
+    /* "You're up next!" banner */
+    .spot-status-msg {
+      width:100%; text-align:center; padding:16px;
+      background:rgba(244,196,48,0.1); border:1px solid rgba(244,196,48,0.25);
+      border-radius:14px; font-size:15px; font-weight:600; color:#F4C430;
+      margin-bottom:16px; display:none;
+    }
+    .spot-status-msg.visible { display:block; }
+
+    /* Leave button */
+    .spot-leave-btn {
+      width:100%; background:rgba(255,69,58,0.12);
+      border:1px solid rgba(255,69,58,0.25);
+      border-radius:14px; padding:16px;
+      color:#FF453A; font-size:15px; font-weight:700;
+      font-family:'Outfit',sans-serif; cursor:pointer;
+      -webkit-tap-highlight-color:transparent;
+      margin-top:8px;
+    }
+
+    /* Done card */
+    .spot-done-card {
+      width:100%; text-align:center; padding:40px 24px;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:20px; display:none;
+    }
+    .spot-done-card.visible { display:block; }
+
+    /* Queue list card */
+    #queue-list-card {
+      width:100%; background:var(--surface);
+      border:1px solid var(--border); border-radius:20px;
+      overflow:hidden; margin-bottom:16px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Main screen -->
+<div class="screen" id="main-screen">
+  <div class="header">
+    <div class="logo">
+      <div class="logo-shapes">
+        <div class="logo-dot"></div>
+        <div class="logo-bar-wide"></div>
+        <div class="logo-bar-short"></div>
+      </div>
+      <span class="logo-text">Up<span style="color:#8BA898;">Next</span></span>
+    </div>
+
+    <div class="header-center">
+      <div class="shop-name" id="shop-name">Loading...</div>
+      <div class="header-stats">
+        <div class="stat-chip green" id="stat-live">0 barbers live</div>
+        <div class="stat-chip" id="stat-waiting">0 waiting</div>
+      </div>
+    </div>
+
+    <div class="clock" id="clock">--:-- --</div>
+  </div>
+
+  <div class="content">
+    <!-- Left: QR check-in panel -->
+    <div class="checkin-panel">
+      <div class="checkin-eyebrow">No appointment needed</div>
+      <div class="checkin-headline">Walk in?<br><span>Scan to check in</span></div>
+      <div class="qr-wrapper"><div id="checkin-qr"></div></div>
+      <div class="checkin-sub" id="checkin-url-label"></div>
+    </div>
+
+    <!-- Right: Queue list -->
+    <div class="up-next">
+      <div class="panel-title">Up Next</div>
+      <div id="tv-queue-list">
+        <div class="empty-state">
+          <div class="empty-icon"><i data-lucide="users" class="ico" style="width:32px;height:32px;opacity:0.3;"></i></div>
+          <div class="empty-text">Queue is empty</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-dot"></div>
+    <div class="footer-text">Live updates · Walk-ins welcome · Check in at the kiosk</div>
+  </div>
+</div>
+
+<!-- ── Mobile "my spot" view ── -->
+<div id="mobile-view">
+  <div class="spot-logo">
+    <div class="logo-shapes">
+      <div class="logo-dot" style="width:10px;height:10px;"></div>
+      <div class="logo-bar-wide" style="width:22px;height:4px;"></div>
+      <div class="logo-bar-short" style="width:14px;height:4px;"></div>
+    </div>
+    <span class="spot-logo-text">Up<span style="color:#8BA898;">Next</span></span>
+  </div>
+
+  <!-- Checked-in success banner — shown when arriving from check-in (?new=1), auto-dismisses -->
+  <div id="checkin-banner" style="
+    display:none; width:100%; text-align:center;
+    background:rgba(46,204,113,0.12); border:1px solid rgba(46,204,113,0.3);
+    border-radius:14px; padding:14px 16px; margin-bottom:16px;
+    font-size:15px; font-weight:700; color:var(--accent);
+    transition: opacity 0.5s ease;
+  "><i data-lucide="check-circle" class="ico" style="width:16px;height:16px;margin-right:6px;"></i>You're checked in — you're in the queue!</div>
+
+  <!-- Remote check-in card — shown when customer checked in remotely (not from QR at shop) -->
+  <div id="remote-card" style="
+    display:none; width:100%;
+    background:rgba(255,165,0,0.08); border:1px solid rgba(255,165,0,0.25);
+    border-radius:16px; padding:18px 16px; margin-bottom:16px; text-align:center;
+  ">
+    <div style="font-size:14px;font-weight:700;color:#FFA500;margin-bottom:6px;">
+      <i data-lucide="map-pin" class="ico" style="width:14px;height:14px;margin-right:4px;"></i>You're on the way
+    </div>
+    <div style="font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:4px;">
+      You have <strong id="remote-countdown" style="color:#FFA500;">30:00</strong> to arrive or you'll be removed from the list.
+    </div>
+    <div style="font-size:12px;color:var(--text-3);margin-bottom:14px;">
+      Tap the button below when you get to the shop.
+    </div>
+    <button id="btn-im-here" onclick="confirmArrival()" style="
+      width:100%; padding:14px; border-radius:12px; border:none;
+      background:var(--accent); color:#000; font-size:15px; font-weight:800;
+      font-family:'Outfit',sans-serif; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; gap:6px;
+    "><i data-lucide="check-circle" class="ico" style="width:16px;height:16px;"></i>I'm Here</button>
+  </div>
+
+  <!-- Arrived confirmation — replaces remote card after tapping "I'm Here" -->
+  <div id="arrived-card" style="
+    display:none; width:100%; text-align:center;
+    background:rgba(46,204,113,0.08); border:1px solid rgba(46,204,113,0.25);
+    border-radius:16px; padding:16px; margin-bottom:16px;
+  ">
+    <div style="font-size:14px;font-weight:700;color:var(--accent);">
+      <i data-lucide="check-circle" class="ico" style="width:14px;height:14px;margin-right:4px;"></i>You're here — sit tight!
+    </div>
+    <div style="font-size:13px;color:var(--text-2);margin-top:4px;">Your barber knows you've arrived.</div>
+  </div>
+
+  <!-- Info card: name + barber + notify message -->
+  <div class="spot-card" id="spot-card">
+    <div class="spot-name" id="spot-name">—</div>
+    <div class="spot-detail" id="spot-barber">—</div>
+    <div style="
+      padding-top:14px; border-top:1px solid var(--border);
+      font-size:13px; color:var(--text-2); line-height:1.5;
+    " id="spot-notify-msg"><i data-lucide="bell" class="ico" style="width:13px;height:13px;margin-right:5px;"></i>Your barber will notify you when he's ready for you</div>
+  </div>
+
+  <!-- Live queue list -->
+  <div id="queue-list-card">
+    <div style="
+      padding:14px 20px 10px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
+    ">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);">Who's Up</div>
+      <div id="queue-pos-label" style="font-size:13px;font-weight:600;color:var(--accent);"></div>
+    </div>
+    <div id="mobile-queue-list">
+      <div style="padding:16px 20px;font-size:14px;color:var(--text-3);">Loading queue...</div>
+    </div>
+  </div>
+
+  <!-- Done / removed card -->
+  <div class="spot-done-card" id="spot-done-card">
+    <div style="margin-bottom:16px;display:flex;justify-content:center;"><i data-lucide="check-circle" class="ico" style="width:52px;height:52px;color:var(--accent);"></i></div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:6px;">All done!</div>
+    <div style="font-size:14px;color:var(--text-2);">Thanks for visiting — see you next time!</div>
+  </div>
+
+  <!-- Leave queue button -->
+  <button class="spot-leave-btn" id="spot-leave-btn" onclick="showLeaveConfirm()">
+    Leave Queue
+  </button>
+
+  <!-- Leave confirmation card (no native confirm() — works on all browsers) -->
+  <div id="leave-confirm" style="
+    display:none; width:100%; background:var(--surface);
+    border:1px solid rgba(255,69,58,0.25); border-radius:16px;
+    padding:20px; text-align:center; margin-top:8px;
+  ">
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px;">Leave the queue?</div>
+    <div style="font-size:13px;color:var(--text-2);margin-bottom:16px;">You'll lose your spot and can't undo this.</div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="hideLeaveConfirm()" style="
+        flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);
+        background:var(--surface);color:var(--text-2);
+        font-size:14px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer;
+      ">Cancel</button>
+      <button onclick="leaveQueue()" style="
+        flex:1;padding:13px;border-radius:12px;border:none;
+        background:#FF453A;color:#fff;
+        font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;
+      ">Yes, Leave</button>
+    </div>
+  </div>
+</div>
+
+<!-- Error screen -->
+<div id="error-screen">
+  <div class="icon">
+    <div class="logo" style="justify-content:center;">
+      <div class="logo-shapes" style="gap:5px;">
+        <div class="logo-dot" style="width:12px;height:12px;"></div>
+        <div class="logo-bar-wide" style="width:36px;height:10px;"></div>
+        <div class="logo-bar-short" style="width:22px;height:10px;"></div>
+      </div>
+      <span class="logo-text" style="font-size:26px;">Up<span style="color:#8BA898;">Next</span></span>
+    </div>
+  </div>
+  <h2 id="error-title">Shop not found</h2>
+  <p id="error-msg">Make sure the URL includes a valid shop ID.</p>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp }  from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+  import { getFirestore, doc, getDoc, updateDoc, collection, onSnapshot, query, where, Timestamp }
+    from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyAcCSUMXGSndEb9LmRBysTe-Rnbj6Z7O7Q",
+    authDomain:        "upnext-4ec7a.firebaseapp.com",
+    projectId:         "upnext-4ec7a",
+    storageBucket:     "upnext-4ec7a.firebasestorage.app",
+    messagingSenderId: "828337578393",
+    appId:             "1:828337578393:web:41ffba3eae692c9d807308"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // ── Clock ────────────────────────────────────────────────────────────────────
+  function updateClock() {
+    const now = new Date();
+    let h = now.getHours(), m = now.getMinutes();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    document.getElementById('clock').textContent =
+      `${h}:${m.toString().padStart(2,'0')} ${ampm}`;
+  }
+  updateClock();
+  setInterval(updateClock, 10000);
+
+  // ── Format name: First + Last initial ────────────────────────────────────────
+  function formatName(fullName) {
+    if (!fullName) return 'Guest';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
+  }
+
+  // ── Security: escape user-supplied strings before injecting into innerHTML ──
+  // Prevents XSS — any HTML/JS in customer names, barber names, etc. is
+  // rendered as harmless text instead of executable markup.
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ── Icon helper — renders a Lucide icon as inline SVG markup ─────────────────
+  // Usage: icon('scissors', 16) → <i data-lucide="scissors" ...></i>
+  // After inserting into DOM, lucide.createIcons() is called to hydrate.
+  function icon(name, size = 16, style = '') {
+    return `<i data-lucide="${name}" class="ico" style="width:${size}px;height:${size}px;${style}"></i>`;
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────────────────
+  const params  = new URLSearchParams(window.location.search);
+  const shopId  = params.get('shop');
+  const entryId = params.get('entry'); // present on mobile "my spot" view
+
+  if (!shopId) {
+    showError('No shop ID provided', 'Add ?shop=YOUR_SHOP_ID to the URL.');
+  } else if (entryId) {
+    // ── MOBILE MODE: show personal spot tracker ──────────────────────────────
+    document.getElementById('main-screen').style.display = 'none';
+    document.getElementById('mobile-view').classList.add('active');
+    initMobileView(shopId, entryId);
+  } else {
+    init(shopId);
+  }
+
+  // ── MOBILE VIEW ─────────────────────────────────────────────────────────────
+  async function initMobileView(shopId, entryId) {
+    const db2 = getFirestore();
+
+    // Load barbers map for names
+    const { getDocs: getDocs2 } = await import('https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js');
+    const bSnap = await getDocs2(collection(db2, 'shops', shopId, 'barbers'));
+    const barbersMap = {};
+    bSnap.forEach(d => { barbersMap[d.id] = d.data(); });
+
+    // Show "checked in" banner if arriving fresh from check-in (?new=1)
+    // For remote check-ins, skip this — the remote-card handles messaging instead
+    if (params.get('new') === '1') {
+      // We'll show the banner after the first snapshot so we know if it's remote
+      window._showBannerOnFirstSnap = true;
+    }
+
+    // Expose leave queue actions globally BEFORE any snapshot fires
+    // so the button onclick="showLeaveConfirm()" always works
+    window.showLeaveConfirm = function() {
+      document.getElementById('leave-confirm').style.display = 'block';
+      document.getElementById('spot-leave-btn').style.display = 'none';
+    };
+    window.hideLeaveConfirm = function() {
+      document.getElementById('leave-confirm').style.display = 'none';
+      document.getElementById('spot-leave-btn').style.display = 'block';
+    };
+    window.leaveQueue = async function() {
+      const btn = document.querySelector('#leave-confirm button:last-child');
+      if (btn) { btn.textContent = 'Leaving...'; btn.disabled = true; }
+      try {
+        await updateDoc(doc(db2, 'shops', shopId, 'queue', entryId), { status: 'removed' });
+        // showDone() will fire automatically via the onSnapshot listener
+      } catch (err) {
+        console.error('leaveQueue error:', err);
+        // Re-enable button and show error so the user knows something went wrong
+        if (btn) { btn.textContent = 'Yes, Leave'; btn.disabled = false; }
+        alert('Could not remove you from the queue. Please ask the front desk.');
+      }
+    };
+
+    // ── Remote check-in: "I'm Here" arrival confirmation ──────────────────────
+    let countdownInterval = null;  // tracks the 30-min countdown timer
+
+    window.confirmArrival = async function() {
+      const btn = document.getElementById('btn-im-here');
+      btn.textContent = 'Confirming...';
+      btn.disabled = true;
+      try {
+        await updateDoc(doc(db2, 'shops', shopId, 'queue', entryId), {
+          remoteStatus: 'arrived'   // barber app sees ✅ Arrived instead of 📍 On the Way
+        });
+        // Swap the remote card for the arrived card
+        document.getElementById('remote-card').style.display = 'none';
+        document.getElementById('arrived-card').style.display = 'block';
+        if (countdownInterval) clearInterval(countdownInterval);
+        lucide.createIcons();
+      } catch (err) {
+        console.error('confirmArrival error:', err);
+        btn.innerHTML = `<i data-lucide="check-circle" class="ico" style="width:16px;height:16px;"></i>I'm Here`;
+        btn.disabled = false;
+        alert('Something went wrong. Please try again.');
+      }
+    };
+
+    // Start 30-min countdown from check-in time
+    function startRemoteCountdown(checkInSeconds) {
+      const deadlineMs = (checkInSeconds * 1000) + (30 * 60 * 1000); // checkIn + 30 min
+      const countdownEl = document.getElementById('remote-countdown');
+
+      function tick() {
+        const remaining = deadlineMs - Date.now();
+        if (remaining <= 0) {
+          countdownEl.textContent = '0:00';
+          clearInterval(countdownInterval);
+          return;
+        }
+        const mins = Math.floor(remaining / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        countdownEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+      }
+      tick(); // run immediately, then every second
+      countdownInterval = setInterval(tick, 1000);
+    }
+
+    // Guard: only set up the queue-list listener once (not re-created on every entry snapshot)
+    let queueListenerSetUp = false;
+
+    // Listen to this entry's document
+    onSnapshot(doc(db2, 'shops', shopId, 'queue', entryId), snap => {
+      if (!snap.exists()) { showDone(); return; }
+      const entry = { id: snap.id, ...snap.data() };
+
+      // Completed or removed — show done state
+      if (entry.status === 'completed' || entry.status === 'removed') {
+        showDone(); return;
+      }
+
+      const isNoPreference = entry.barberId === '__next__' || entry.noPreference;
+      const barber = barbersMap[entry.assignedBarberId ?? entry.barberId];
+      const barberName = isNoPreference ? `${icon('zap',13,'margin-right:4px;')}Next Available` : escapeHtml(barber?.name || 'Any barber');
+
+      document.getElementById('spot-name').textContent = entry.customerName || 'You';
+      document.getElementById('spot-barber').innerHTML = `${icon('scissors',13,'margin-right:4px;')}${barberName}`;
+
+      // Remote check-in status — show the appropriate card
+      if (entry.isRemoteCheckIn) {
+        if (entry.remoteStatus === 'arrived') {
+          // Already tapped "I'm Here"
+          document.getElementById('remote-card').style.display = 'none';
+          document.getElementById('arrived-card').style.display = 'block';
+          if (countdownInterval) clearInterval(countdownInterval);
+        } else {
+          // Still on the way — show countdown + "I'm Here" button
+          document.getElementById('remote-card').style.display = 'block';
+          document.getElementById('arrived-card').style.display = 'none';
+          // Start countdown if not already running (uses checkInTime from Firestore)
+          if (!countdownInterval && entry.checkInTime?.seconds) {
+            startRemoteCountdown(entry.checkInTime.seconds);
+          }
+        }
+        lucide.createIcons();
+      }
+
+      // Show the "checked in" banner for non-remote check-ins only (remote gets its own card)
+      if (window._showBannerOnFirstSnap && !entry.isRemoteCheckIn) {
+        window._showBannerOnFirstSnap = false;
+        const banner = document.getElementById('checkin-banner');
+        banner.style.display = 'block';
+        setTimeout(() => {
+          banner.style.opacity = '0';
+          setTimeout(() => { banner.style.display = 'none'; }, 500);
+        }, 4000);
+      } else if (window._showBannerOnFirstSnap && entry.isRemoteCheckIn) {
+        window._showBannerOnFirstSnap = false; // skip banner — remote card handles it
+      }
+
+      // In-chair state — they're being served
+      if (entry.status === 'in_chair') {
+        document.getElementById('spot-leave-btn').style.display = 'none';
+        document.getElementById('queue-list-card').style.display = 'none';
+        document.getElementById('spot-barber').innerHTML = `${icon('scissors',14,'margin-right:5px;')}In the chair with ${barberName}`;  // barberName already escaped above
+        document.getElementById('spot-notify-msg').innerHTML = `${icon('scissors',13,'margin-right:5px;')}Sit back and enjoy your cut!`;
+        lucide.createIcons();
+        return;
+      }
+
+      // Set up the live queue-list listener once after we know the barberId
+      if (!queueListenerSetUp) {
+        queueListenerSetUp = true;
+
+        onSnapshot(
+          query(
+            collection(db2, 'shops', shopId, 'queue'),
+            where('barberId', '==', entry.barberId),
+            where('status', 'in', ['waiting', 'notified'])
+          ),
+          qSnap => {
+            // Sort by check-in time so order is stable
+            const queue = qSnap.docs
+              .map(d => ({ id: d.id, ...d.data() }))
+              .sort((a, b) => (a.checkInTime?.seconds ?? 0) - (b.checkInTime?.seconds ?? 0));
+
+            const pos = queue.findIndex(e => e.id === entryId) + 1;
+
+            // Update the position chip in the queue card header
+            document.getElementById('queue-pos-label').textContent =
+              pos > 0 ? `You're #${pos}` : '';
+
+            // Render each person in line as a row
+            const listEl = document.getElementById('mobile-queue-list');
+            if (queue.length === 0) {
+              listEl.innerHTML = `<div style="padding:16px 20px;font-size:14px;color:var(--text-3);">Queue is empty</div>`;
+            } else {
+              listEl.innerHTML = queue.map((e, i) => {
+                const isMe = e.id === entryId;
+                const displayName = escapeHtml((e.customerName || 'Guest').split(' ')[0]);
+                const hasBorder = i < queue.length - 1 ? '1px solid var(--border)' : 'none';
+
+                return `
+                  <div style="
+                    display:flex; align-items:center; gap:14px;
+                    padding:13px 20px;
+                    border-bottom:${hasBorder};
+                    background:${isMe ? 'rgba(46,204,113,0.08)' : 'transparent'};
+                  ">
+                    <div style="
+                      width:30px; height:30px; border-radius:50%; flex-shrink:0;
+                      display:flex; align-items:center; justify-content:center;
+                      font-size:13px; font-weight:700;
+                      background:${isMe ? 'var(--accent)' : 'var(--surface-2)'};
+                      color:${isMe ? '#000' : 'var(--text-2)'};
+                      border:${isMe ? 'none' : '1px solid var(--border)'};
+                    ">${i + 1}</div>
+                    <div style="
+                      flex:1; font-size:15px;
+                      font-weight:${isMe ? '700' : '500'};
+                      color:${isMe ? 'var(--accent)' : 'var(--text)'};
+                    ">${displayName}${isMe ? ' — you' : ''}</div>
+                    ${i === 0 ? `<div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:0.5px;">NEXT</div>` : ''}
+                  </div>
+                `;
+              }).join('');
+            }
+          }
+        );
+      }
+    });
+
+    function showDone() {
+      document.getElementById('spot-card').style.display       = 'none';
+      document.getElementById('spot-leave-btn').style.display  = 'none';
+      document.getElementById('queue-list-card').style.display = 'none';
+      document.getElementById('leave-confirm').style.display   = 'none'; // hide confirm dialog too
+      document.getElementById('spot-done-card').classList.add('visible');
+    }
+  }
+
+  async function init(shopId) {
+    // Load shop info
+    const shopSnap = await getDoc(doc(db, 'shops', shopId));
+    if (!shopSnap.exists()) {
+      showError('Shop not found', 'Check that the shop ID in the URL is correct.');
+      return;
+    }
+
+    const shopName = shopSnap.data().name || 'UpNext';
+    document.getElementById('shop-name').textContent = shopName;
+
+    // Generate QR code for walk-in check-in
+    // window.QRCode is used explicitly because this is a module script —
+    // CDN globals need window. to be reliably accessible inside ES modules.
+    const checkinUrl = `https://upnext-app.com/checkin?shop=${shopId}&source=qr`;
+    if (window.QRCode) {
+      new window.QRCode(document.getElementById('checkin-qr'), {
+        text: checkinUrl,
+        width: 220,
+        height: 220,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: window.QRCode.CorrectLevel.M
+      });
+    }
+    document.getElementById('checkin-url-label').textContent = shopName + ' · Walk-ins welcome';
+
+    // Load barbers
+    let barbersMap = {};
+    const barbersSnap = await getDoc(doc(db, 'shops', shopId));
+    const { getDocs } = await import('https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js');
+    const bSnap = await getDocs(collection(db, 'shops', shopId, 'barbers'));
+    bSnap.forEach(d => { barbersMap[d.id] = d.data(); });
+
+    // ── Toggle messaging based on whether barbers are live ───────────────────
+    function setLiveMode(liveCount) {
+      const eyebrow  = document.querySelector('.checkin-eyebrow');
+      const headline = document.querySelector('.checkin-headline');
+      const sub      = document.getElementById('checkin-url-label');
+      const footer   = document.querySelector('.footer-text');
+      const statLive = document.getElementById('stat-live');
+
+      if (liveCount === 0) {
+        eyebrow.textContent  = 'Walk-ins unavailable right now';
+        headline.innerHTML   = 'Sorry, no one\'s<br>taking walk-ins<br><span>at the moment.</span>';
+        sub.textContent      = '';
+        footer.textContent   = 'We apologize for the inconvenience — please check with the front desk';
+        statLive.className   = 'stat-chip';
+      } else {
+        eyebrow.textContent  = 'No appointment needed';
+        headline.innerHTML   = 'Walk in?<br><span>Scan to check in</span>';
+        sub.textContent      = shopName + ' · Walk-ins welcome';
+        footer.textContent   = 'Live updates · Walk-ins welcome · Scan to check in';
+        statLive.className   = 'stat-chip green';
+      }
+    }
+
+    // Keep barbers map fresh + react to live count changes
+    // (We no longer render barber cards here — the right panel now shows the queue list)
+    onSnapshot(collection(db, 'shops', shopId, 'barbers'), snap => {
+      snap.forEach(d => { barbersMap[d.id] = d.data(); });
+
+      // Count barbers who are live so the header chip and left-panel messaging stay accurate
+      const liveCount = snap.docs
+        .map(d => d.data())
+        .filter(b => b.goLive === true && b.status !== 'off')
+        .length;
+
+      document.getElementById('stat-live').textContent =
+        `${liveCount} barber${liveCount !== 1 ? 's' : ''} live`;
+      setLiveMode(liveCount);
+    });
+
+    // ── TV queue: merge active queue + today's history ──────────────────────────
+    // When a barber marks someone done, the iOS app archives the entry to
+    // 'queueHistory' and deletes it from 'queue'. So we listen to BOTH and merge.
+
+    // Midnight today (local time) — used to filter history to today only
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayStartSec = todayStart.getTime() / 1000;
+
+    // Cache both snapshots so either listener can trigger a re-render
+    let activeCache  = [];  // from 'queue' (waiting / notified / in_chair)
+    let historyCache = [];  // from 'queueHistory' (completed today)
+
+    function renderTVQueue() {
+      // Merge active + history.
+      // Sort: active entries (waiting / notified / in_chair) come first, oldest check-in at top
+      // so #1 is always the person who signed in first — no one looks like they're cutting in line.
+      // Completed / walked-out / removed entries sink to the bottom, also oldest-first.
+      const allEntries = [...activeCache, ...historyCache]
+        .sort((a, b) => {
+          const aIsActive = a.status === 'waiting' || a.status === 'notified' || a.status === 'in_chair';
+          const bIsActive = b.status === 'waiting' || b.status === 'notified' || b.status === 'in_chair';
+          // Active entries always float above done/out entries
+          if (aIsActive !== bIsActive) return aIsActive ? -1 : 1;
+          // Within the same group, oldest check-in = smallest position number (first come, first served)
+          return (a.checkInTime?.seconds ?? 0) - (b.checkInTime?.seconds ?? 0);
+        });
+
+      // Header stat chip — only count active waiters
+      const waitingCount = activeCache.filter(e => e.status === 'waiting' || e.status === 'notified').length;
+      document.getElementById('stat-waiting').textContent = `${waitingCount} waiting`;
+
+      const listEl = document.getElementById('tv-queue-list');
+      if (allEntries.length === 0) {
+        listEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">${icon('users', 32, 'opacity:0.3;')}</div>
+            <div class="empty-text">No walk-ins yet today</div>
+          </div>`;
+        lucide.createIcons();
+        return;
+      }
+
+      // Build rows exactly like the owner dashboard sheetRow
+      const rows = allEntries.map((e, i) => {
+        const isDone    = e.status === 'completed';
+        const isOut     = e.status === 'removed' || e.status === 'walked_out';
+        const isInChair = e.status === 'in_chair';
+        const isWaiting = e.status === 'waiting';
+        const isNotified = e.status === 'notified';
+        const fade = isDone || isOut;
+
+        // Resolve barber name
+        const barberId   = e.assignedBarberId ?? e.barberId;
+        const noPreference = barberId === '__next__' || e.noPreference;
+        const barberName = noPreference
+          ? 'Next Available'
+          : escapeHtml(barbersMap[barberId]?.name || 'Any barber');
+
+        // Position badge — #N, monospaced, dim if done
+        const badgeColor = fade ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.6)';
+        const badgeHtml = `<div style="font-size:22px;font-weight:700;font-family:monospace;color:${badgeColor};width:56px;flex-shrink:0;">#${i + 1}</div>`;
+
+        // Name — strikethrough + dim if done/out
+        const nameWeight = fade ? '400' : '700';
+        const nameColor  = fade ? 'rgba(255,255,255,0.3)' : '#fff';
+        const nameDecor  = fade ? 'line-through' : 'none';
+        const nameHtml = `<div style="font-size:38px;font-weight:${nameWeight};text-decoration:${nameDecor};color:${nameColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(e.customerName || 'Walk-in')}</div>`;
+
+        // Detail sub-line
+        let detailHtml = '';
+        if (isDone) {
+          detailHtml = `<div style="font-size:18px;color:rgba(46,204,113,0.7);margin-top:4px;">${icon('check-circle', 16, 'margin-right:5px;')}Served by ${barberName}</div>`;
+        } else if (isInChair) {
+          detailHtml = `<div style="font-size:18px;color:var(--accent);margin-top:4px;">${icon('scissors', 16, 'margin-right:5px;')}With ${barberName}</div>`;
+        } else if (isOut) {
+          detailHtml = `<div style="font-size:18px;color:rgba(255,69,58,0.6);margin-top:4px;">${icon('user-x', 16, 'margin-right:5px;')}Walked out</div>`;
+        } else if (e.checkInTime?.seconds) {
+          const t = new Date(e.checkInTime.seconds * 1000);
+          let h = t.getHours(), m = t.getMinutes();
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          h = h % 12 || 12;
+          const timeStr = `${h}:${m.toString().padStart(2,'0')} ${ampm}`;
+          detailHtml = `<div style="font-size:18px;color:rgba(255,255,255,0.35);margin-top:4px;">${timeStr}</div>`;
+        }
+
+        // Status chip (right side) — matches owner dashboard chip colors
+        let chipHtml = '';
+        if (isDone) {
+          chipHtml = `<div style="font-size:17px;font-weight:500;padding:7px 16px;border-radius:100px;background:rgba(128,128,128,0.15);color:rgba(255,255,255,0.4);flex-shrink:0;">Done</div>`;
+        } else if (isInChair) {
+          chipHtml = `<div style="font-size:17px;font-weight:500;padding:7px 16px;border-radius:100px;background:rgba(46,204,113,0.15);color:var(--accent);flex-shrink:0;">In Chair</div>`;
+        } else if (isNotified) {
+          chipHtml = `<div style="font-size:17px;font-weight:500;padding:7px 16px;border-radius:100px;background:rgba(10,132,255,0.15);color:#0A84FF;flex-shrink:0;">Notified</div>`;
+        } else if (isWaiting) {
+          chipHtml = `<div style="font-size:17px;font-weight:500;padding:7px 16px;border-radius:100px;background:rgba(255,159,10,0.15);color:#FF9F0A;flex-shrink:0;">Waiting</div>`;
+        } else if (isOut) {
+          chipHtml = `<div style="font-size:17px;font-weight:500;padding:7px 16px;border-radius:100px;background:rgba(255,69,58,0.15);color:#FF453A;flex-shrink:0;">Left</div>`;
+        }
+
+        const isLast = i === allEntries.length - 1;
+        return `
+          <div style="display:flex;align-items:center;gap:16px;padding:22px 22px;${isLast ? '' : 'border-bottom:1px solid rgba(255,255,255,0.07);'}opacity:${isOut ? '0.5' : '1'};">
+            ${badgeHtml}
+            <div style="flex:1;min-width:0;">
+              ${nameHtml}
+              ${detailHtml}
+            </div>
+            ${chipHtml}
+          </div>`;
+      });
+
+      listEl.innerHTML = `
+        <div style="background:rgba(255,255,255,0.05);border-radius:16px;border:1px solid rgba(255,255,255,0.1);overflow:hidden;">
+          ${rows.join('')}
+        </div>`;
+
+      lucide.createIcons();
+    }
+
+    // Listen to active queue — status filter matches iOS FirebaseService.listenToQueue()
+    // so only waiting / notified / in_chair entries show, not old test data or archived entries
+    onSnapshot(
+      query(
+        collection(db, 'shops', shopId, 'queue'),
+        where('status', 'in', ['waiting', 'notified', 'in_chair'])
+      ),
+      snap => {
+        // Appointments are excluded from the TV queue — they have their
+        // own flow and are handled on the barber's phone, not displayed here.
+        activeCache = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(e => !e.isAppointment);
+        renderTVQueue();
+      }
+    );
+
+    // Listen to today's completed history — these are the crossed-out done entries
+    onSnapshot(
+      query(
+        collection(db, 'shops', shopId, 'queueHistory'),
+        where('checkInTime', '>=', Timestamp.fromDate(todayStart))
+      ),
+      snap => {
+        // Walk-ins only — exclude appointments from the TV queue history too.
+        historyCache = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(e => ['completed', 'walked_out', 'removed'].includes(e.status) && !e.isAppointment);
+        renderTVQueue();
+      },
+      err => {
+        // If this fires, it means Firestore rules are blocking unauthenticated reads on queueHistory.
+        // Fix: update Firestore rules to allow read on shops/{shopId}/queueHistory
+        console.error('[UpNext] queueHistory listener error:', err.code, err.message);
+      }
+    );
+  }
+
+  function showError(title, msg) {
+    document.getElementById('main-screen').style.display = 'none';
+    document.getElementById('error-title').textContent = title;
+    document.getElementById('error-msg').textContent   = msg;
+    document.getElementById('error-screen').classList.add('visible');
+  }
+
+  // Hydrate all static HTML icons on first load
+  lucide.createIcons();
+</script>
+
+</body>
+</html>

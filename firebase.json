@@ -1,0 +1,74 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": []
+    }
+  ],
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/checkin",
+        "destination": "/checkin.html"
+      },
+      {
+        "source": "/barber",
+        "destination": "/barber.html"
+      },
+      {
+        "source": "/signup",
+        "destination": "/signup.html"
+      },
+      {
+        "source": "/privacy",
+        "destination": "/privacy.html"
+      },
+      {
+        "source": "/terms",
+        "destination": "/terms.html"
+      },
+      {
+        "source": "/queue",
+        "destination": "/queue.html"
+      },
+      {
+        "source": "/login",
+        "destination": "/login.html"
+      },
+      {
+        "source": "/join",
+        "destination": "/join.html"
+      },
+      {
+        "source": "/wait",
+        "destination": "/wait.html"
+      },
+      {
+        "source": "/success",
+        "destination": "/success.html"
+      }
+    ]
+  }
+}

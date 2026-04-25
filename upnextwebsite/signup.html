@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Up — UpNext</title>
+<meta name="description" content="Create your UpNext account and get your barbershop's walk-in queue running in minutes.">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --deep:     #0D2B1A;
+  --deep2:    #091F13;
+  --deep3:    #061410;
+  --green:    #2ECC71;
+  --green-dk: #1BA355;
+  --gg:       #8BA898;
+  --black:    #0D0D0D;
+  --white:    #FFFFFF;
+  --dot-bg:   #2A4A35;
+  --text-dim: rgba(255,255,255,0.45);
+  --error:    #e74c3c;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--black);
+  color: white;
+  overflow-x: hidden;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* NAV */
+nav {
+  padding: 20px 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(6,20,16,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(46,204,113,0.08);
+}
+
+.nav-logo { display: flex; align-items: center; gap: 13px; text-decoration: none; }
+.nav-dots { display: flex; flex-direction: column; gap: 4.5px; }
+.nav-dot { border-radius: 3px; }
+.nav-dot.d1 { width: 7px; height: 7px; border-radius: 50%; background: var(--dot-bg); }
+.nav-dot.d2 { width: 22px; height: 7px; background: var(--green); }
+.nav-dot.d3 { width: 14px; height: 7px; background: var(--dot-bg); }
+.nav-wm { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+.nav-wm .up { color: white; }
+.nav-wm .nx { color: var(--gg); }
+.nav-link { color: var(--gg); text-decoration: none; font-size: 14px; font-weight: 500; }
+.nav-link:hover { color: var(--green); }
+
+/* MAIN */
+.signup-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.signup-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(46,204,113,0.08) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.signup-card {
+  max-width: 480px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  animation: fadeUp 0.6s ease both;
+}
+
+.signup-card h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(28px, 5vw, 40px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.signup-card h1 span { color: var(--green); }
+
+.signup-card .subtitle {
+  font-size: 15px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin-bottom: 36px;
+  text-align: center;
+}
+
+/* Steps indicator */
+.steps-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.step-dot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  border: 2px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.3);
+  transition: all 0.3s ease;
+}
+
+.step-dot.active .step-num {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--black);
+}
+
+.step-dot.done .step-num {
+  background: rgba(46,204,113,0.15);
+  border-color: rgba(46,204,113,0.3);
+  color: var(--green);
+}
+
+.step-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.05em;
+}
+
+.step-dot.active .step-label { color: var(--green); }
+.step-dot.done .step-label { color: rgba(46,204,113,0.5); }
+
+.step-line {
+  width: 40px;
+  height: 2px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 1px;
+}
+
+/* Form */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-group input::placeholder {
+  color: rgba(255,255,255,0.25);
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: rgba(46,204,113,0.5);
+  background: rgba(255,255,255,0.06);
+}
+
+.form-group select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='rgba(255,255,255,0.4)'%3E%3Cpath d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  padding-right: 40px;
+}
+
+.form-group select option {
+  background: #1a1a1a;
+  color: white;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-error {
+  font-size: 12px;
+  color: var(--error);
+  margin-top: 6px;
+  display: none;
+}
+
+.form-error.visible { display: block; }
+
+/* Plan picker */
+.plan-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.plan-option {
+  padding: 16px;
+  border-radius: 14px;
+  border: 2px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.plan-option:hover {
+  border-color: rgba(46,204,113,0.2);
+  background: rgba(46,204,113,0.03);
+}
+
+.plan-option.selected {
+  border-color: var(--green);
+  background: rgba(46,204,113,0.08);
+}
+
+.plan-option .plan-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--green);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.plan-option .plan-price {
+  font-family: 'Outfit', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: white;
+}
+
+.plan-option .plan-period {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* Submit button */
+.signup-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  background: var(--green);
+  color: var(--deep3);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 16px 36px;
+  border-radius: 100px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 0 32px rgba(46,204,113,0.25);
+  margin-bottom: 16px;
+}
+
+.signup-btn:hover {
+  background: var(--green-dk);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 40px rgba(46,204,113,0.35);
+}
+
+.signup-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.signup-btn .spinner {
+  display: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: var(--deep3);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.signup-btn.loading .spinner { display: block; }
+.signup-btn.loading .btn-text { display: none; }
+
+.signin-text {
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.signin-text a {
+  color: var(--green);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.signin-text a:hover { text-decoration: underline; }
+
+/* Global error */
+.global-error {
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: #e74c3c;
+  display: none;
+  text-align: center;
+}
+
+.global-error.visible { display: block; }
+
+/* Footer */
+footer {
+  background: var(--deep2);
+  border-top: 1px solid rgba(255,255,255,0.04);
+  padding: 24px 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-copy { font-size: 12px; color: rgba(255,255,255,0.2); }
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  nav { padding: 16px 24px; }
+  .signup-wrapper { padding: 40px 20px; }
+  .form-row { grid-template-columns: 1fr; }
+  .steps-indicator { gap: 8px; }
+  .step-label { display: none; }
+  .step-line { width: 24px; }
+  footer { padding: 20px 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="/">
+    <div class="nav-dots">
+      <div class="nav-dot d1"></div>
+      <div class="nav-dot d2"></div>
+      <div class="nav-dot d3"></div>
+    </div>
+    <div class="nav-wm"><span class="up">Up</span><span class="nx">Next</span></div>
+  </a>
+  <a href="/login" class="nav-link">Sign In</a>
+</nav>
+
+<!-- SIGNUP -->
+<div class="signup-wrapper">
+  <div class="signup-card">
+    <h1>Get your shop <span>on UpNext.</span></h1>
+    <p class="subtitle">Create your account, then pick your plan. Takes about 2 minutes.</p>
+
+    <!-- Step indicator: 1 = Account  →  2 = Payment -->
+    <div class="steps-indicator">
+      <div class="step-dot active" id="step1-dot">
+        <div class="step-num">1</div>
+        <div class="step-label">Account</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-dot" id="step2-dot">
+        <div class="step-num">2</div>
+        <div class="step-label">Payment</div>
+      </div>
+    </div>
+
+    <div class="global-error" id="globalError"></div>
+
+    <form id="signupForm" autocomplete="off">
+      <!-- Shop Name -->
+      <div class="form-group">
+        <label for="shopName">Shop Name</label>
+        <input type="text" id="shopName" placeholder="e.g. Fademasters Barbershop" required>
+        <div class="form-error" id="shopNameError">Please enter your shop name</div>
+      </div>
+
+      <!-- Owner Name -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="firstName">First Name</label>
+          <input type="text" id="firstName" placeholder="Carlos" required>
+        </div>
+        <div class="form-group">
+          <label for="lastName">Last Name</label>
+          <input type="text" id="lastName" placeholder="Canales" required>
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="you@yourshop.com" required>
+        <div class="form-error" id="emailError">Please enter a valid email address</div>
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="At least 6 characters" required minlength="6">
+        <div class="form-error" id="passwordError">Password must be at least 6 characters</div>
+      </div>
+
+      <!-- Plan -->
+      <div class="form-group">
+        <label>Your Plan</label>
+        <div class="plan-picker" style="grid-template-columns: 1fr;">
+          <div class="plan-option selected" data-plan="base" data-price-id="price_1TOUbW7SltOVcxC2LgM3Xlw8" style="cursor: default;">
+            <div class="plan-name">Base</div>
+            <div class="plan-price">$49.99</div>
+            <div class="plan-period">/month &middot; 30-day money-back guarantee</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" class="signup-btn" id="submitBtn">
+        <span class="btn-text">Create Account & Continue to Payment →</span>
+        <span class="spinner"></span>
+      </button>
+
+      <p class="signin-text">Already have an account? <a href="/login">Sign in</a></p>
+    </form>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-copy">&copy; 2026 UpNext. Built for barbers, by a barber.</div>
+</footer>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<script>
+  // Firebase config — same project as the UpNext app
+  const firebaseConfig = {
+    apiKey: "AIzaSyAcCSUMXGSndEb9LmRBysTe-Rnbj6Z7O7Q",
+    authDomain: "upnext-4ec7a.firebaseapp.com",
+    projectId: "upnext-4ec7a",
+    storageBucket: "upnext-4ec7a.firebasestorage.app",
+    messagingSenderId: "828337578393",
+    appId: "1:828337578393:web:41ffba3eae692c9d807308"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // Stripe payment links per plan
+  // These redirect to Stripe Checkout with the user's email pre-filled
+  const STRIPE_LINKS = {
+    base: "https://buy.stripe.com/8x2cMZdZf2Mre0hgj873G00",
+    multi: "https://buy.stripe.com/8x2cMZdZf2Mre0hgj873G00" // Update with multi-location link when created
+  };
+
+  let selectedPlan = 'base';
+
+  // Plan picker
+  function selectPlan(el) {
+    document.querySelectorAll('.plan-option').forEach(p => p.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedPlan = el.dataset.plan;
+  }
+
+  // Form validation
+  function validateForm() {
+    let valid = true;
+    const shopName = document.getElementById('shopName').value.trim();
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    // Reset errors
+    document.querySelectorAll('.form-error').forEach(e => e.classList.remove('visible'));
+
+    if (!shopName) {
+      document.getElementById('shopNameError').classList.add('visible');
+      valid = false;
+    }
+    if (!email || !email.includes('@')) {
+      document.getElementById('emailError').classList.add('visible');
+      valid = false;
+    }
+    if (password.length < 6) {
+      document.getElementById('passwordError').classList.add('visible');
+      valid = false;
+    }
+    return valid;
+  }
+
+  // Form submission
+  document.getElementById('signupForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    const btn = document.getElementById('submitBtn');
+    const globalError = document.getElementById('globalError');
+    globalError.classList.remove('visible');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    const shopName = document.getElementById('shopName').value.trim();
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    try {
+      // 1. Create Firebase Auth account
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+      const user = userCredential.user;
+
+      // 2. Update display name
+      await user.updateProfile({
+        displayName: firstName + ' ' + lastName
+      });
+
+      // 3. Create the shop document in Firestore
+      //    This mirrors the structure the iOS app expects
+      await db.collection('shops').doc(user.uid).set({
+        name: shopName,
+        ownerName: firstName + ' ' + lastName,
+        ownerEmail: email,
+        ownerId: user.uid,
+        selectedPlan: selectedPlan,
+        subscriptionTier: 'base',       // Default tier — updated by Stripe webhook after payment
+        subscriptionStatus: 'cancelled',  // No subscription yet — activated by Stripe webhook
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdVia: 'web_signup'
+      });
+
+      // 3b. Create the AppUser doc in users/{uid}.
+      //     Without this, login.html → /barber → onAuthStateChanged
+      //     fails the users/{uid} existence check and signs the user
+      //     straight back out. Mirrors FirebaseService.createOwnerUser
+      //     in the iOS app so the two flows are interchangeable.
+      await db.collection('users').doc(user.uid).set({
+        email: email,
+        displayName: firstName + ' ' + lastName,
+        role: 'owner',
+        shopId: user.uid,                  // owner's shop = their own uid
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      // 4. Update step indicator to show progress
+      document.getElementById('step1-dot').classList.remove('active');
+      document.getElementById('step1-dot').classList.add('done');
+      document.getElementById('step1-dot').querySelector('.step-num').textContent = '✓';
+      document.getElementById('step2-dot').classList.add('active');
+
+      // 5. Redirect to Stripe checkout with email pre-filled
+      //    Small delay so the user sees the step transition
+      setTimeout(() => {
+        const stripeLink = STRIPE_LINKS[selectedPlan];
+        // Stripe payment links accept prefilled_email as a query param
+        const separator = stripeLink.includes('?') ? '&' : '?';
+        window.location.href = stripeLink + separator + 'prefilled_email=' + encodeURIComponent(email);
+      }, 600);
+
+    } catch (error) {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+
+      let message = 'Something went wrong. Please try again.';
+      if (error.code === 'auth/email-already-in-use') {
+        message = 'An account with this email already exists. Try signing in instead.';
+      } else if (error.code === 'auth/weak-password') {
+        message = 'Password is too weak. Please use at least 6 characters.';
+      } else if (error.code === 'auth/invalid-email') {
+        message = 'Please enter a valid email address.';
+      }
+
+      globalError.textContent = message;
+      globalError.classList.add('visible');
+    }
+  });
+</script>
+
+</body>
+</html>

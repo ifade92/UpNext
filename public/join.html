@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>UpNext – Join a Shop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #061410;
+      --surface: #1A1A1A;
+      --surface-2: #222222;
+      --accent: #2ECC71;
+      --accent-dark: #1BA355;
+      --red: #FF453A;
+      --text: #FFFFFF;
+      --text-2: rgba(255,255,255,0.6);
+      --text-3: rgba(255,255,255,0.35);
+      --border: rgba(255,255,255,0.08);
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px calc(32px + env(safe-area-inset-bottom));
+    }
+
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px 32px;
+    }
+
+    /* ── Logo ── */
+    .logo-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .logo-shapes {
+      display: flex;
+      flex-direction: column;
+      gap: 4.5px;
+      align-items: flex-start;
+    }
+    .logo-dot       { width: 7px; height: 7px; border-radius: 50%; background: #2A4A35; }
+    .logo-bar-wide  { width: 22px; height: 7px; border-radius: 2px; background: #2ECC71; }
+    .logo-bar-short { width: 14px; height: 7px; border-radius: 2px; background: #2A4A35; }
+    .logo-text {
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    .logo-text span { color: #8BA898; }
+
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .header p {
+      font-size: 14px;
+      color: var(--text-2);
+    }
+
+    /* ── Steps ── */
+    .step { display: none; }
+    .step.active { display: block; }
+
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 22px;
+    }
+    .step-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.2s;
+    }
+    .step-dot.active { background: var(--accent); }
+
+    /* ── Form ── */
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 7px;
+    }
+    .field input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 14px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .field input:focus { border-color: var(--accent); }
+    .field input.valid { border-color: var(--accent); }
+    .field input.invalid { border-color: var(--red); }
+
+    .field-hint {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 5px;
+    }
+
+    /* ── Shop code preview box ── */
+    .shop-preview {
+      display: none;
+      background: rgba(46,204,113,0.07);
+      border: 1px solid rgba(46,204,113,0.2);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-top: 8px;
+    }
+    .shop-preview.visible { display: block; }
+    .shop-preview .shop-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .shop-preview .shop-sub {
+      font-size: 12px;
+      color: var(--text-2);
+      margin-top: 2px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #000;
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 4px;
+    }
+    .btn-primary:hover { background: var(--accent-dark); }
+    .btn-primary:disabled { opacity: 0.5; cursor: default; }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 13px;
+      background: transparent;
+      color: var(--text-2);
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: border-color 0.2s;
+    }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.2); }
+
+    .error-msg {
+      display: none;
+      background: rgba(255,69,58,0.1);
+      border: 1px solid rgba(255,69,58,0.3);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 13px;
+      color: var(--red);
+      margin-bottom: 16px;
+    }
+    .error-msg.visible { display: block; }
+
+    .links {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .links a { color: var(--accent); text-decoration: none; }
+    .links a:hover { text-decoration: underline; }
+
+    /* ── Success ── */
+    .success-icon {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: rgba(46,204,113,0.15);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 28px;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="card">
+
+    <div class="header">
+      <div class="logo-mark">
+        <div class="logo-shapes">
+          <div class="logo-dot"></div>
+          <div class="logo-bar-wide"></div>
+          <div class="logo-bar-short"></div>
+        </div>
+        <span class="logo-text">Up<span>Next</span></span>
+      </div>
+      <h1>Join a Shop</h1>
+      <p>Create your barber account</p>
+    </div>
+
+    <div class="step-indicator">
+      <div class="step-dot active" id="dot-1"></div>
+      <div class="step-dot" id="dot-2"></div>
+      <div class="step-dot" id="dot-3"></div>
+    </div>
+
+    <div id="error-msg" class="error-msg"></div>
+
+    <!-- ─── Step 1: Shop Code ─── -->
+    <div class="step active" id="step-1">
+      <div class="field">
+        <label>Shop Code</label>
+        <input type="text" id="input-shop-code"
+          placeholder="e.g. fademasters-a1b2c3"
+          oninput="lookupShop()"
+          autocapitalize="none" autocorrect="off" spellcheck="false" />
+        <div class="field-hint">Ask your shop owner for this code.</div>
+      </div>
+
+      <div class="shop-preview" id="shop-preview">
+        <div class="shop-name" id="preview-shop-name"></div>
+        <div class="shop-sub">✓ Shop found</div>
+      </div>
+
+      <button class="btn-primary" id="btn-step1" onclick="nextStep(1)" disabled>Continue →</button>
+      <div class="links">Already have an account? <a href="/login">Sign in</a></div>
+    </div>
+
+    <!-- ─── Step 2: Account Info ─── -->
+    <div class="step" id="step-2">
+      <div class="field">
+        <label>Your Name</label>
+        <input type="text" id="input-name" placeholder="First and last name" />
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="input-email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="input-password" placeholder="Min. 8 characters" autocomplete="new-password" />
+      </div>
+      <button class="btn-primary" onclick="nextStep(2)">Continue →</button>
+      <button class="btn-secondary" onclick="prevStep(2)">← Back</button>
+    </div>
+
+    <!-- ─── Step 3: Confirm & Create ─── -->
+    <div class="step" id="step-3">
+      <p style="font-size:14px;color:var(--text-2);margin-bottom:20px;">
+        You're joining <strong id="confirm-shop-name" style="color:#fff;"></strong> as a barber.
+        Your account will be created and you'll be ready to start taking clients.
+      </p>
+
+      <div style="
+        background:var(--surface-2);border:1px solid var(--border);
+        border-radius:12px;padding:14px 16px;margin-bottom:20px;
+        font-size:13px;color:var(--text-2);line-height:1.6;
+      ">
+        <div><span style="color:var(--text-3);">Name</span> &nbsp;<strong id="confirm-name" style="color:#fff;"></strong></div>
+        <div><span style="color:var(--text-3);">Email</span> &nbsp;<strong id="confirm-email" style="color:#fff;"></strong></div>
+        <div><span style="color:var(--text-3);">Shop</span> &nbsp;<strong id="confirm-shop2" style="color:#fff;"></strong></div>
+      </div>
+
+      <button class="btn-primary" id="btn-create" onclick="createAccount()">Create Account</button>
+      <button class="btn-secondary" onclick="prevStep(3)">← Back</button>
+    </div>
+
+    <!-- ─── Step 4: Success ─── -->
+    <div class="step" id="step-4">
+      <div class="success-icon">✓</div>
+      <div style="text-align:center;">
+        <h2 style="font-size:22px;font-weight:700;margin-bottom:8px;">You're in!</h2>
+        <p style="font-size:14px;color:var(--text-2);margin-bottom:28px;">
+          Your barber account is ready. Head to your dashboard to get started.
+        </p>
+        <a href="/barber" style="
+          display:block;padding:14px;background:var(--accent);color:#000;
+          font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;
+          border-radius:12px;text-decoration:none;text-align:center;
+        ">Go to Dashboard →</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp }                          from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc }      from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyAcCSUMXGSndEb9LmRBysTe-Rnbj6Z7O7Q",
+    authDomain:        "upnext-4ec7a.firebaseapp.com",
+    projectId:         "upnext-4ec7a",
+    storageBucket:     "upnext-4ec7a.firebasestorage.app",
+    messagingSenderId: "828337578393",
+    appId:             "1:828337578393:web:41ffba3eae692c9d807308"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  let verifiedShopId   = null;
+  let verifiedShopName = null;
+  let lookupTimeout    = null;
+
+  // ── Shop code lookup (debounced) ──────────────────────────────────────────
+  window.lookupShop = function() {
+    const code = document.getElementById('input-shop-code').value.trim().toLowerCase();
+    const btn  = document.getElementById('btn-step1');
+    const preview = document.getElementById('shop-preview');
+
+    clearTimeout(lookupTimeout);
+    btn.disabled = true;
+    preview.classList.remove('visible');
+    verifiedShopId = null;
+
+    if (code.length < 4) return;
+
+    lookupTimeout = setTimeout(async () => {
+      try {
+        const snap = await getDoc(doc(db, 'shops', code));
+        if (snap.exists()) {
+          verifiedShopId   = code;
+          verifiedShopName = snap.data().name || code;
+          document.getElementById('preview-shop-name').textContent = verifiedShopName;
+          preview.classList.add('visible');
+          btn.disabled = false;
+        }
+      } catch (_) { /* silent — user may still be typing */ }
+    }, 500);
+  };
+
+  // ── Step navigation ───────────────────────────────────────────────────────
+  window.nextStep = function(from) {
+    clearError();
+    if (from === 1) {
+      if (!verifiedShopId) { showError('Enter a valid shop code to continue.'); return; }
+      goToStep(2);
+    } else if (from === 2) {
+      const name     = document.getElementById('input-name').value.trim();
+      const email    = document.getElementById('input-email').value.trim();
+      const password = document.getElementById('input-password').value;
+      if (!name)              { showError('Please enter your name.'); return; }
+      if (!email.includes('@')) { showError('Please enter a valid email.'); return; }
+      if (password.length < 8) { showError('Password must be at least 8 characters.'); return; }
+
+      document.getElementById('confirm-name').textContent  = name;
+      document.getElementById('confirm-email').textContent = email;
+      document.getElementById('confirm-shop-name').textContent = verifiedShopName;
+      document.getElementById('confirm-shop2').textContent     = verifiedShopName;
+      goToStep(3);
+    }
+  };
+
+  window.prevStep = function(from) {
+    clearError();
+    goToStep(from - 1);
+  };
+
+  function goToStep(n) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById(`step-${n}`).classList.add('active');
+    document.querySelectorAll('.step-dot').forEach((d, i) => {
+      d.classList.toggle('active', i < n);
+    });
+    window.scrollTo(0, 0);
+  }
+
+  // ── Create account ────────────────────────────────────────────────────────
+  window.createAccount = async function() {
+    const name     = document.getElementById('input-name').value.trim();
+    // Lowercase the email so it matches barber docs regardless of how the
+    // owner typed it in iOS (Bob@Example.com vs bob@example.com). The old
+    // flow preserved casing and broke the email self-heal in barber.html.
+    const email    = document.getElementById('input-email').value.trim().toLowerCase();
+    const password = document.getElementById('input-password').value;
+    const btn      = document.getElementById('btn-create');
+
+    btn.disabled = true;
+    btn.textContent = 'Creating account…';
+
+    try {
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = credential.user.uid;
+
+      // Try to find a matching barber doc that the owner has already added
+      // for this person. If we find one, link it NOW so the Firestore rule
+      // `isOwnBarberDoc` passes on the very first Go Live toggle. Without
+      // this, new barbers couldn't turn themselves live until barber.html's
+      // self-heal ran on a subsequent sign-in — and even then only if the
+      // email happened to match exactly.
+      let linkedBarberId = null;
+      try {
+        const barbersSnap = await getDocs(
+          collection(db, 'shops', verifiedShopId, 'barbers')
+        );
+        const match = barbersSnap.docs.find(d =>
+          (d.data().email || '').trim().toLowerCase() === email
+        );
+        if (match) linkedBarberId = match.id;
+      } catch (e) {
+        console.warn('Could not pre-link barber at signup:', e);
+      }
+
+      // Write user record — role: barber, linked to shopId (+ barberId if found)
+      const userData = {
+        name,
+        email,
+        role: 'barber',
+        shopId: verifiedShopId,
+        createdAt: new Date().toISOString()
+      };
+      if (linkedBarberId) userData.barberId = linkedBarberId;
+
+      await setDoc(doc(db, 'users', uid), userData);
+
+      goToStep(4);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+
+      if (err.code === 'auth/email-already-in-use') {
+        showError('An account with this email already exists. Try signing in instead.');
+      } else {
+        showError('Something went wrong. Please try again.');
+      }
+    }
+  };
+
+  function showError(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    el.classList.add('visible');
+  }
+
+  function clearError() {
+    document.getElementById('error-msg').classList.remove('visible');
+  }
+
+  // Auto-fill shop code from invite link (e.g. /join?code=fademasters-abc123)
+  // Barbers who tap an invite link skip the "ask your owner for the code" step
+  const urlCode = new URLSearchParams(window.location.search).get('code');
+  if (urlCode) {
+    const input = document.getElementById('input-shop-code');
+    input.value = urlCode.trim().toLowerCase();
+    lookupShop(); // trigger the live shop lookup automatically
+  }
+</script>
+</body>
+</html>

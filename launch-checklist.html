@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UpNext Launch Checklist</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0A0A0A;
+    --surface: #161616;
+    --surface-2: #1E1E1E;
+    --accent: #2ECC71;
+    --accent-dim: rgba(46,204,113,0.12);
+    --red: #E74C3C;
+    --red-dim: rgba(231,76,60,0.12);
+    --orange: #F39C12;
+    --orange-dim: rgba(243,156,18,0.12);
+    --blue: #3498DB;
+    --blue-dim: rgba(52,152,219,0.12);
+    --text: #F0F0F0;
+    --text-sec: rgba(255,255,255,0.55);
+    --border: rgba(255,255,255,0.08);
+    --radius: 12px;
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
+  body { padding: 40px 20px 80px; max-width: 680px; margin: 0 auto; }
+
+  .header { text-align: center; margin-bottom: 40px; }
+  .logo { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .logo-shapes { display: flex; flex-direction: column; gap: 4px; }
+  .logo-dot { width: 7px; height: 7px; background: #2A4A35; border-radius: 50%; }
+  .logo-bar-w { width: 22px; height: 7px; background: var(--accent); border-radius: 2px; }
+  .logo-bar-s { width: 14px; height: 7px; background: #2A4A35; border-radius: 2px; }
+  .logo-text { font-size: 18px; font-weight: 700; letter-spacing: -0.4px; }
+  h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  .subtitle { color: var(--text-sec); font-size: 15px; }
+  .progress-wrap { margin-top: 20px; }
+  .progress-bar { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.4s ease; width: 0%; }
+  .progress-label { font-size: 13px; color: var(--text-sec); margin-top: 6px; text-align: right; }
+
+  .section { margin-bottom: 32px; }
+  .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .section-badge { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 6px; }
+  .badge-critical { background: var(--red-dim); color: var(--red); }
+  .badge-warning { background: var(--orange-dim); color: var(--orange); }
+  .badge-nice { background: var(--blue-dim); color: var(--blue); }
+  .badge-growth { background: var(--accent-dim); color: var(--accent); }
+  .section-title { font-size: 17px; font-weight: 700; }
+
+  .task { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; background: var(--surface); border-radius: var(--radius); margin-bottom: 8px; cursor: pointer; transition: background 0.15s, opacity 0.3s; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .task:hover { background: var(--surface-2); }
+  .task.done { opacity: 0.45; }
+  .task.done .task-text { text-decoration: line-through; }
+
+  .checkbox { flex-shrink: 0; width: 22px; height: 22px; border: 2px solid rgba(255,255,255,0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; margin-top: 1px; }
+  .task.done .checkbox { background: var(--accent); border-color: var(--accent); }
+  .checkmark { display: none; }
+  .task.done .checkmark { display: block; }
+
+  .task-content { flex: 1; }
+  .task-text { font-size: 15px; font-weight: 500; line-height: 1.4; }
+  .task-detail { font-size: 13px; color: var(--text-sec); margin-top: 4px; line-height: 1.4; }
+  .task-file { font-size: 12px; color: var(--accent); opacity: 0.7; margin-top: 3px; font-family: 'SF Mono', monospace; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-shapes">
+      <div class="logo-dot"></div>
+      <div class="logo-bar-w"></div>
+      <div class="logo-bar-s"></div>
+    </div>
+    <span class="logo-text">UpNext</span>
+  </div>
+  <h1>Launch Checklist</h1>
+  <p class="subtitle">Ship-readiness tasks, ordered by priority</p>
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-label" id="progressLabel">0 / 22 complete</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-badge badge-critical">Critical</span>
+    <span class="section-title">Fix Before Submitting</span>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Set paywallBypassed = false</div>
+      <div class="task-detail">Or better yet, delete the flag and wrap in #if DEBUG so it can't ship in a release build.</div>
+      <div class="task-file">ContentView.swift : line 27</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Replace RevenueCat test key with production key</div>
+      <div class="task-detail">Test keys don't process real payments. Get your production public API key from RevenueCat Dashboard.</div>
+      <div class="task-file">UpNextApp.swift : line 21</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Lock down Firestore queue writes</div>
+      <div class="task-detail">Add field validation: require customerName (string, &lt;100 chars), customerPhone (E.164), status must = "waiting" on create. Only auth users can update.</div>
+      <div class="task-file">firestore.rules : line 23-26</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Add shop-scoped write rules</div>
+      <div class="task-detail">Verify request.auth.uid belongs to a user with matching shopId before allowing writes to barbers, services, settings, and queueHistory.</div>
+      <div class="task-file">firestore.rules : lines 37-54</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Add owner signup flow in the iOS app</div>
+      <div class="task-detail">App Store will reject if there's no way to create an account inside the app. Currently owners can only sign up via web.</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Test subscription purchase + restore with sandbox Apple ID</div>
+      <div class="task-detail">Full end-to-end test: purchase, verify access, restore on a different device, cancel + verify lockout.</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Enable Firestore daily backups</div>
+      <div class="task-detail">Firebase Console > Firestore > Backups. Export to Cloud Storage bucket daily. Protects against accidental data deletion.</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Set Firebase billing alerts</div>
+      <div class="task-detail">Set alerts at $50, $100, and $200 to protect against runaway costs from spam or bugs.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-badge badge-warning">Warning</span>
+    <span class="section-title">First 2 Weeks After Launch</span>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Add rate limiting on queue check-ins</div>
+      <div class="task-detail">Cloud Function that throttles writes: max 1 check-in per phone number per 5 minutes. Block empty/invalid phone numbers.</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Sanitize customer name input before SMS</div>
+      <div class="task-detail">Strip special characters, enforce max 50 chars, validate phone format server-side in Cloud Functions before Twilio sends.</div>
+      <div class="task-file">functions/src/notifications.ts</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Remove customer phone numbers from public reads</div>
+      <div class="task-detail">Anyone can currently read every customer's phone from the queue via Firestore REST API. Use Cloud Functions for TV/kiosk display instead.</div>
+      <div class="task-file">firestore.rules : line 24</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Enable Firestore offline persistence</div>
+      <div class="task-detail">Add enablePersistence so the app still works if the shop's internet drops mid-day. Currently 100% dependent on live connection.</div>
+      <div class="task-file">FirebaseService.swift</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-badge badge-nice">Month 1</span>
+    <span class="section-title">Post-Launch Improvements</span>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Add CSV data export for owners</div>
+      <div class="task-detail">Queue history and revenue data. Without this, owners feel locked in and are more likely to churn.</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Build in-app onboarding wizard</div>
+      <div class="task-detail">Guided setup for new shop owners. Without this you'll burn hours on support calls per customer.</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Add customer loyalty / visit streak feature</div>
+      <div class="task-detail">Simple "5th visit gets a discount" or streak tracker. Massively increases perceived value of the platform.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-badge badge-growth">Month 1-2</span>
+    <span class="section-title">Multi-Location Support</span>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Phase 1: Update data models</div>
+      <div class="task-detail">Add shopIds array + activeShopId to AppUser. Update Firestore rules to check array membership. (2-3 days)</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Phase 2: Build shop switcher UI</div>
+      <div class="task-detail">Dropdown in OwnerTabView, "Add Location" flow, per-location settings. (4-5 days)</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Phase 3: Cross-location analytics</div>
+      <div class="task-detail">Aggregate dashboard showing total revenue + per-location breakdown. THE killer upsell feature for Pro tier. (3-4 days)</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Phase 4: Test + run migration</div>
+      <div class="task-detail">Test with 2-3 test shops. Run Firestore migration script to populate shopIds for all existing users. (2-3 days)</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-badge badge-growth">Month 2-3</span>
+    <span class="section-title">Growth Features</span>
+  </div>
+
+  <div class="task" onclick="toggle(this)">
+    <div class="checkbox"><svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="task-content">
+      <div class="task-text">Enhanced analytics</div>
+      <div class="task-detail">Time-of-day heatmaps, customer retention rates, revenue forecasting. Justifies the higher subscription tiers.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'upnext-checklist';
+
+  function loadState() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    } catch { return {}; }
+  }
+
+  function saveState(state) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+  }
+
+  function updateProgress() {
+    const tasks = document.querySelectorAll('.task');
+    const done = document.querySelectorAll('.task.done').length;
+    const total = tasks.length;
+    document.getElementById('progressFill').style.width = (total ? (done / total * 100) : 0) + '%';
+    document.getElementById('progressLabel').textContent = done + ' / ' + total + ' complete';
+  }
+
+  function toggle(el) {
+    el.classList.toggle('done');
+    const tasks = document.querySelectorAll('.task');
+    const state = {};
+    tasks.forEach((t, i) => { if (t.classList.contains('done')) state[i] = true; });
+    saveState(state);
+    updateProgress();
+  }
+
+  // Restore state on load
+  (function() {
+    const state = loadState();
+    const tasks = document.querySelectorAll('.task');
+    tasks.forEach((t, i) => { if (state[i]) t.classList.add('done'); });
+    updateProgress();
+  })();
+</script>
+
+</body>
+</html>

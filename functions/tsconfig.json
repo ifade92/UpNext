@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "esModuleInterop": true,
+    "moduleResolution": "nodenext",
+    "outDir": "lib",
+    "sourceMap": true,
+    "target": "es2017",
+    "skipLibCheck": true
+  },
+  "compileOnSave": true,
+  "include": [
+    "src/index.ts",
+    "src/pushNotifications.ts",
+    "src/stripeWebhook.ts"
+  ]
+}

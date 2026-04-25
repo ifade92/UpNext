@@ -2,208 +2,449 @@
 //  ShopSettingsView.swift
 //  UpNext
 //
-//  The owner's setup screen — manage barbers and services without touching Firestore.
-//  Two tabs: Barbers and Services.
+//  Settings hub — accessed from the ⚙️ icon in the dashboard header.
+//  Opens a NavigationStack with 4 sections:
 //
-//  Barbers tab:  add, edit (name + type), delete
-//  Services tab: add, edit (name + duration + price), toggle active, delete
+//    Account  — password reset, booking link
+//    Barbers  — add, edit (name + type), delete, reorder
+//    Services — add, edit (name + duration + price), toggle active, delete
+//    Shop     — auto-close schedule
 //
 
 import SwiftUI
 import CoreImage.CIFilterBuiltins
+import FirebaseAuth
 
-// MARK: - ShopSettingsView
+// MARK: - ShopSettingsView (Hub)
 
 struct ShopSettingsView: View {
 
     @StateObject var viewModel: ShopSettingsViewModel
     @Environment(\.dismiss) private var dismiss
 
-    // When used as a tab (not a modal sheet), hide the back button
+    // When shown as a tab (not a sheet), hide the Done button
     var showDismissButton: Bool = true
 
-    // Sign out action — passed in from the parent so this view doesn't
-    // need to hold an AuthViewModel reference directly
+    // Sign out action — passed in from the parent
     var onSignOut: (() -> Void)? = nil
 
-    // Which tab is selected — 0 = Barbers, 1 = Services
-    @State private var selectedTab = 0
+    // The logged-in user's barber ID — used to load their booking link in Account
+    var barberId: String? = nil
 
-    // Controls the check-in QR sheet
-    @State private var showQRSheet = false
-
-    // Reset Password alert states
-    @State private var showResetPasswordConfirm = false   // "Are you sure?" prompt
-    @State private var showResetPasswordSuccess = false   // Confirmation toast
+    // The logged-in AppUser — passed to AccountSettingsView for notification prefs
+    var appUser: AppUser? = nil
 
     var body: some View {
-        ZStack {
-            Color.brandNearBlack.ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                Color.brandNearBlack.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                headerBar
-                tabPicker
+                ScrollView {
+                    VStack(spacing: 20) {
 
-                if viewModel.isLoading {
-                    loadingView
-                } else {
-                    TabView(selection: $selectedTab) {
-                        barbersTab.tag(0)
-                        servicesTab.tag(1)
-                        shopTab.tag(2)
+                        // ── Four settings sections ─────────────────────────
+                        VStack(spacing: 0) {
+                            navRow(
+                                icon: "person.circle.fill",
+                                title: "Account",
+                                subtitle: "Password & booking link",
+                                destination: AnyView(
+                                    AccountSettingsView(viewModel: viewModel, barberId: barberId, appUser: appUser)
+                                )
+                            )
+                            rowDivider
+                            navRow(
+                                icon: "person.2.fill",
+                                title: "Barbers",
+                                subtitle: "Add, edit, reorder",
+                                destination: AnyView(
+                                    BarberSettingsView(viewModel: viewModel)
+                                )
+                            )
+                            rowDivider
+                            navRow(
+                                icon: "scissors",
+                                title: "Services",
+                                subtitle: "Menu, pricing, availability",
+                                destination: AnyView(
+                                    ServiceSettingsView(viewModel: viewModel)
+                                )
+                            )
+                            rowDivider
+                            navRow(
+                                icon: "clock.fill",
+                                title: "Shop",
+                                subtitle: "Auto-close, schedule",
+                                destination: AnyView(
+                                    ShopConfigView(viewModel: viewModel)
+                                )
+                            )
+                            rowDivider
+                            navRow(
+                                icon: "calendar.badge.clock",
+                                title: "History",
+                                subtitle: "Browse any past day's walk-in sheet",
+                                destination: AnyView(
+                                    HistoryView(shopId: viewModel.shopId)
+                                )
+                            )
+                        }
+                        .background(Color.brandInput)
+                        .cornerRadius(14)
+
+                        // ── Sign Out ───────────────────────────────────────
+                        if let signOut = onSignOut {
+                            Button(action: signOut) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                                    Text("Sign Out")
+                                }
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.red.opacity(0.8))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                                .background(Color.red.opacity(0.08))
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                                )
+                            }
+                        }
                     }
-                    // Use page style so swiping between tabs feels native
-                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 32)
+                }
+            }
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                if showDismissButton {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                            .foregroundColor(.accent)
+                    }
                 }
             }
         }
-        .onAppear { viewModel.onAppear() }
+        .onAppear  { viewModel.onAppear()    }
         .onDisappear { viewModel.onDisappear() }
-        // Add Barber sheet
-        .sheet(isPresented: $viewModel.showAddBarber) {
-            AddBarberSheet(viewModel: viewModel)
-        }
-        // Edit Barber sheet — triggered when editingBarber is set
-        .sheet(item: $viewModel.editingBarber) { barber in
-            EditBarberSheet(barber: barber, viewModel: viewModel)
-        }
-        // Add Service sheet
-        .sheet(isPresented: $viewModel.showAddService) {
-            AddServiceSheet(viewModel: viewModel)
-        }
-        // Edit Service sheet — triggered when editingService is set
-        .sheet(item: $viewModel.editingService) { service in
-            EditServiceSheet(service: service, viewModel: viewModel)
-        }
         .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
             Button("OK") { viewModel.clearError() }
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
-        // Shop check-in QR code sheet
-        .sheet(isPresented: $showQRSheet) {
-            ShopCheckInQRSheet(shopId: viewModel.shopId)
-        }
-        // Reset password — confirmation prompt
-        .alert("Reset Password?", isPresented: $showResetPasswordConfirm) {
-            Button("Send Reset Email", role: .destructive) { viewModel.resetPassword() }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("We'll send a password reset link to your email address.")
-        }
-        // Reset password — success confirmation
-        .alert("Check Your Email", isPresented: $viewModel.resetPasswordSent) {
-            Button("OK") { viewModel.resetPasswordSent = false }
-        } message: {
-            Text("A password reset link has been sent to your email. Follow the link to set a new password.")
-        }
     }
 
-    // MARK: - Header
+    // MARK: - Nav Row
 
-    private var headerBar: some View {
-        HStack {
-            // Only show back button when used as a modal sheet, not as a tab
-            if showDismissButton {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
+    private func navRow(icon: String, title: String, subtitle: String, destination: AnyView) -> some View {
+        NavigationLink(destination: destination) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.accent.opacity(0.12))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: icon)
+                        .font(.system(size: 15))
                         .foregroundColor(.accent)
                 }
-            } else {
-                // Invisible placeholder so title stays centered
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .semibold))
-                    .opacity(0)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.gray.opacity(0.4))
             }
-
-            Spacer()
-
-            Text("Settings")
-                .font(.brandHeadline)
-                .foregroundColor(.white)
-
-            Spacer()
-
-            // Invisible spacer to keep title centered
-            Image(systemName: "chevron.left")
-                .font(.system(size: 16, weight: .semibold))
-                .opacity(0)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .buttonStyle(PlainButtonStyle())
     }
 
-    // MARK: - Tab Picker
+    private var rowDivider: some View {
+        Divider()
+            .background(Color.gray.opacity(0.15))
+            .padding(.leading, 62)
+    }
+}
 
-    private var tabPicker: some View {
-        HStack(spacing: 0) {
-            tabButton(title: "Barbers",  icon: "person.2",  index: 0)
-            tabButton(title: "Services", icon: "scissors",  index: 1)
-            tabButton(title: "Shop",     icon: "clock",     index: 2)
-        }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 12)
+
+// MARK: - Account Settings
+
+struct AccountSettingsView: View {
+
+    @ObservedObject var viewModel: ShopSettingsViewModel
+
+    // Logged-in user's barber ID — used to pre-fill and save their booking link
+    var barberId: String?
+
+    // The logged-in AppUser — passed in so we can read/update notification prefs
+    var appUser: AppUser?
+
+    @State private var bookingUrl: String = ""
+    @State private var bookingLinkSaved = false
+
+    // Notification preference — initialized from appUser, updated locally on toggle
+    @State private var notificationsEnabled: Bool = true
+
+    // Password reset state
+    @State private var showResetAlert: Bool = false
+    @State private var resetEmail: String = ""
+    @State private var resetEmailSent: Bool = false
+
+    // Look up the current user's barber doc to pre-fill booking URL
+    private var myBarber: Barber? {
+        guard let bid = barberId else { return nil }
+        return viewModel.barbers.first(where: { $0.id == bid })
     }
 
-    private func tabButton(title: String, icon: String, index: Int) -> some View {
-        Button(action: { withAnimation { selectedTab = index } }) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.caption)
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+    var body: some View {
+        ZStack {
+            Color.brandNearBlack.ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 16) {
+
+                    // ── Account ───────────────────────────────────────────
+                    sectionLabel("ACCOUNT")
+
+                    VStack(spacing: 0) {
+                        // Reset Password
+                        Button(action: { showResetAlert = true }) {
+                            HStack(spacing: 14) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.accent.opacity(0.12))
+                                        .frame(width: 36, height: 36)
+                                    Image(systemName: "key.fill")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.accent)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Reset Password")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                    Text("Send a reset link to your email")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(.gray.opacity(0.4))
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    .background(Color.brandInput)
+                    .cornerRadius(14)
+
+                    // ── Notifications ─────────────────────────────────────
+                    sectionLabel("NOTIFICATIONS")
+
+                    VStack(spacing: 0) {
+                        HStack(spacing: 14) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.accent.opacity(0.12))
+                                    .frame(width: 36, height: 36)
+                                Image(systemName: "bell.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.accent)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Walk-In Alerts")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                                Text("Get notified when a customer checks in")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                            Spacer()
+                            Toggle("", isOn: $notificationsEnabled)
+                                .tint(.accent)
+                                .labelsHidden()
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                    }
+                    .background(Color.brandInput)
+                    .cornerRadius(14)
+
+                    // ── Booking Link ──────────────────────────────────────
+                    sectionLabel("BOOKING LINK")
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "link")
+                                .font(.system(size: 15))
+                                .foregroundColor(.accent)
+                                .frame(width: 28)
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Your Booking Link")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                                Text("Shown as a QR on the kiosk when you're offline")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+
+                        TextField("https://square.site/...", text: $bookingUrl)
+                            .textFieldStyle(BrandTextFieldStyle())
+                            .keyboardType(.URL)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+
+                        Button(action: saveBookingLink) {
+                            Text(bookingLinkSaved ? "✓ Saved" : "Save Booking Link")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.black)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.accent)
+                                .cornerRadius(10)
+                        }
+                    }
+                    .padding(14)
+                    .background(Color.brandInput)
+                    .cornerRadius(14)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 32)
             }
-            .foregroundColor(selectedTab == index ? .black : .gray)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
-            .background(selectedTab == index ? Color.accent : Color.brandInput)
-            .cornerRadius(10)
         }
-        .padding(.horizontal, 4)
-    }
-
-    // MARK: - Barbers Tab
-
-    private var barbersTab: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                // Section header with add button
-                // Shop Code banner — owner shares this with their barbers so they can sign up
-                shopCodeBanner
-
-                sectionHeader(
-                    title: "Barbers (\(viewModel.barbers.count))",
-                    buttonLabel: "Add Barber",
-                    action: { viewModel.showAddBarber = true }
+        .navigationTitle("Account")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .onAppear {
+            bookingUrl = myBarber?.bookingUrl ?? ""
+            notificationsEnabled = appUser?.wantsNotifications ?? true
+        }
+        // Save notification preference when the toggle changes
+        .onChange(of: notificationsEnabled) { _, newValue in
+            guard let userId = appUser?.id else { return }
+            Task {
+                try? await FirebaseService.shared.updateNotificationPreference(
+                    userId: userId,
+                    enabled: newValue
                 )
-
-                if viewModel.barbers.isEmpty {
-                    emptyState(
-                        icon: "person.badge.plus",
-                        message: "No barbers yet.\nTap \"Add Barber\" to get started."
+            }
+        }
+        // Password reset alert
+        .alert("Reset Password", isPresented: $showResetAlert) {
+            TextField("Your email address", text: $resetEmail)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+            Button("Send Reset Link") {
+                Task {
+                    try? await FirebaseAuth.Auth.auth().sendPasswordReset(
+                        withEmail: resetEmail.trimmingCharacters(in: .whitespaces)
                     )
-                } else {
-                    // Pass index so the row can show ↑/↓ order buttons
-                    ForEach(Array(viewModel.barbers.enumerated()), id: \.element.id) { index, barber in
-                        barberRow(barber, index: index, total: viewModel.barbers.count)
+                    resetEmailSent = true
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("We'll send a password reset link to your email.")
+        }
+        .alert("Check Your Email", isPresented: $resetEmailSent) {
+            Button("Got it", role: .cancel) {}
+        } message: {
+            Text("A reset link has been sent. Check your inbox.")
+        }
+    }
+
+    private func saveBookingLink() {
+        guard let bid = barberId else { return }
+        viewModel.saveBookingLink(barberId: bid, url: bookingUrl)
+        withAnimation { bookingLinkSaved = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            bookingLinkSaved = false
+        }
+    }
+
+    private func sectionLabel(_ text: String) -> some View {
+        HStack {
+            Text(text)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.gray)
+                .tracking(1.2)
+            Spacer()
+        }
+        .padding(.top, 4)
+    }
+}
+
+
+// MARK: - Barber Settings
+
+struct BarberSettingsView: View {
+
+    @ObservedObject var viewModel: ShopSettingsViewModel
+
+    var body: some View {
+        ZStack {
+            Color.brandNearBlack.ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 12) {
+                    sectionHeader(
+                        title: "Barbers (\(viewModel.barbers.count))",
+                        buttonLabel: "Add Barber",
+                        action: { viewModel.showAddBarber = true }
+                    )
+
+                    if viewModel.barbers.isEmpty {
+                        emptyState(
+                            icon: "person.badge.plus",
+                            message: "No barbers yet.\nTap \"Add Barber\" to get started."
+                        )
+                    } else {
+                        ForEach(Array(viewModel.barbers.enumerated()), id: \.element.id) { index, barber in
+                            barberRow(barber, index: index, total: viewModel.barbers.count)
+                        }
                     }
                 }
-
-                // Sign Out — only show when rendered as a tab (not modal sheet)
-                if !showDismissButton, let signOut = onSignOut {
-                    signOutButton(action: signOut)
-                        .padding(.top, 16)
-                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 32)
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 32)
+        }
+        .navigationTitle("Barbers")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .sheet(isPresented: $viewModel.showAddBarber) {
+            AddBarberSheet(viewModel: viewModel)
+        }
+        .sheet(item: $viewModel.editingBarber) { barber in
+            EditBarberSheet(barber: barber, viewModel: viewModel)
         }
     }
 
-    /// A single row in the barbers list showing name, type badge, status, order controls, and edit/delete actions.
-    /// index and total are used to disable the ↑/↓ buttons at the edges of the list.
+    // MARK: - Barber Row
+
     private func barberRow(_ barber: Barber, index: Int, total: Int) -> some View {
         HStack(spacing: 12) {
             // Avatar circle
@@ -217,115 +458,161 @@ struct ShopSettingsView: View {
             }
 
             // Name + type badge
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(barber.name)
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
 
                 HStack(spacing: 6) {
-                    Text(barber.barberType.displayName)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.gray)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(Color.brandDotBg)
-                        .cornerRadius(5)
-
-                    if barber.goLive {
-                        Text("LIVE")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(.accent)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.accent.opacity(0.15))
-                            .cornerRadius(4)
-                    }
+                    Text(barber.goLive ? "Live" : "Offline")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(barber.goLive ? .accent : .gray)
                 }
             }
 
             Spacer()
 
-            // ↑ / ↓ order buttons — grayed out at the edges of the list
-            HStack(spacing: 4) {
+            // Reorder buttons
+            VStack(spacing: 4) {
                 Button(action: {
+                    guard index > 0 else { return }
                     viewModel.moveBarbers(from: IndexSet(integer: index), to: index - 1)
                 }) {
                     Image(systemName: "chevron.up")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(index == 0 ? .gray.opacity(0.3) : .brandSecondary)
-                        .frame(width: 28, height: 28)
-                        .background(Color.brandDotBg)
-                        .cornerRadius(6)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(index == 0 ? .gray.opacity(0.2) : .gray)
                 }
                 .disabled(index == 0)
 
                 Button(action: {
+                    guard index < total - 1 else { return }
                     viewModel.moveBarbers(from: IndexSet(integer: index), to: index + 2)
                 }) {
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(index == total - 1 ? .gray.opacity(0.3) : .brandSecondary)
-                        .frame(width: 28, height: 28)
-                        .background(Color.brandDotBg)
-                        .cornerRadius(6)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(index == total - 1 ? .gray.opacity(0.2) : .gray)
                 }
                 .disabled(index == total - 1)
+            }
+            .frame(width: 28)
+
+            // Live / Offline toggle — owner can flip any barber on or off
+            Button(action: { viewModel.toggleBarberLive(barber) }) {
+                Text(barber.goLive ? "● Live" : "Offline")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(barber.goLive ? .black : .gray)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(barber.goLive ? Color.accent : Color.white.opacity(0.1))
+                    .cornerRadius(20)
             }
 
             // Edit button
             Button(action: { viewModel.editingBarber = barber }) {
-                Image(systemName: "pencil")
-                    .font(.system(size: 14))
+                Text("Edit")
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.accent)
-                    .frame(width: 34, height: 34)
-                    .background(Color.brandDotBg)
-                    .cornerRadius(8)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.accent.opacity(0.12))
+                    .cornerRadius(7)
             }
 
             // Delete button
             Button(role: .destructive, action: { viewModel.deleteBarber(barber) }) {
                 Image(systemName: "trash")
-                    .font(.system(size: 14))
-                    .foregroundColor(.red.opacity(0.8))
-                    .frame(width: 34, height: 34)
-                    .background(Color.red.opacity(0.1))
-                    .cornerRadius(8)
+                    .font(.system(size: 13))
+                    .foregroundColor(.red.opacity(0.7))
             }
         }
-        .padding(14)
+        .padding(12)
         .background(Color.brandInput)
-        .cornerRadius(14)
+        .cornerRadius(12)
     }
 
-    // MARK: - Services Tab
+    // MARK: - Shared Helpers
 
-    private var servicesTab: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                sectionHeader(
-                    title: "Services (\(viewModel.services.count))",
-                    buttonLabel: "Add Service",
-                    action: { viewModel.showAddService = true }
-                )
+    private func sectionHeader(title: String, buttonLabel: String, action: @escaping () -> Void) -> some View {
+        HStack {
+            Text(title.uppercased())
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.gray)
+                .tracking(1.2)
+            Spacer()
+            Button(action: action) {
+                HStack(spacing: 5) {
+                    Image(systemName: "plus").font(.system(size: 11, weight: .bold))
+                    Text(buttonLabel).font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundColor(.black)
+                .padding(.horizontal, 12).padding(.vertical, 7)
+                .background(Color.accent)
+                .cornerRadius(8)
+            }
+        }
+        .padding(.top, 8)
+    }
 
-                if viewModel.services.isEmpty {
-                    emptyState(
-                        icon: "list.bullet.rectangle",
-                        message: "No services yet.\nTap \"Add Service\" to get started."
+    private func emptyState(icon: String, message: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: icon).font(.system(size: 32)).foregroundColor(.gray.opacity(0.4))
+            Text(message).font(.subheadline).foregroundColor(.gray).multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+}
+
+
+// MARK: - Service Settings
+
+struct ServiceSettingsView: View {
+
+    @ObservedObject var viewModel: ShopSettingsViewModel
+
+    var body: some View {
+        ZStack {
+            Color.brandNearBlack.ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 12) {
+                    sectionHeader(
+                        title: "Services (\(viewModel.services.count))",
+                        buttonLabel: "Add Service",
+                        action: { viewModel.showAddService = true }
                     )
-                } else {
-                    ForEach(viewModel.services) { service in
-                        serviceRow(service)
+
+                    if viewModel.services.isEmpty {
+                        emptyState(
+                            icon: "list.bullet.rectangle",
+                            message: "No services yet.\nTap \"Add Service\" to get started."
+                        )
+                    } else {
+                        ForEach(viewModel.services) { service in
+                            serviceRow(service)
+                        }
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 32)
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 32)
+        }
+        .navigationTitle("Services")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .sheet(isPresented: $viewModel.showAddService) {
+            AddServiceSheet(viewModel: viewModel)
+        }
+        .sheet(item: $viewModel.editingService) { service in
+            EditServiceSheet(service: service, viewModel: viewModel)
         }
     }
 
-    /// A single row in the services list showing name, duration, price, active toggle.
+    // MARK: - Service Row
+
     private func serviceRow(_ service: Service) -> some View {
         HStack(spacing: 14) {
             // Active/inactive indicator dot
@@ -333,7 +620,6 @@ struct ShopSettingsView: View {
                 .fill(service.active ? Color.accent : Color.gray.opacity(0.4))
                 .frame(width: 8, height: 8)
 
-            // Service name + duration
             VStack(alignment: .leading, spacing: 3) {
                 Text(service.name)
                     .font(.subheadline)
@@ -346,8 +632,7 @@ struct ShopSettingsView: View {
                         .foregroundColor(.gray)
 
                     if let _ = service.price {
-                        Text("·")
-                            .foregroundColor(.gray)
+                        Text("·").foregroundColor(.gray)
                         Text(service.displayPrice)
                             .font(.caption)
                             .foregroundColor(.gray)
@@ -362,8 +647,7 @@ struct ShopSettingsView: View {
                 Text(service.active ? "Active" : "Hidden")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(service.active ? .accent : .gray)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
+                    .padding(.horizontal, 9).padding(.vertical, 5)
                     .background(service.active ? Color.accent.opacity(0.12) : Color.brandDotBg)
                     .cornerRadius(7)
             }
@@ -394,148 +678,7 @@ struct ShopSettingsView: View {
         .opacity(service.active ? 1.0 : 0.6)
     }
 
-    // MARK: - Shop Tab (Schedule + Hours)
-
-    private var shopTab: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-
-                // ── Section label ────────────────────────────────────────────
-                HStack {
-                    Text("SCHEDULE")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.gray)
-                        .tracking(1.2)
-                    Spacer()
-                }
-                .padding(.top, 8)
-
-                // ── Auto-Close card ──────────────────────────────────────────
-                VStack(alignment: .leading, spacing: 14) {
-
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Auto-Close Time")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                            Text("All barbers go offline automatically at this time every night. Individual barbers still control their own availability during the day.")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        Spacer()
-                        // Toggle switch — enables/disables auto-close
-                        Toggle("", isOn: Binding(
-                            get: { viewModel.autoCloseEnabled },
-                            set: { enabled in
-                                viewModel.autoCloseEnabled = enabled
-                                if enabled && viewModel.autoCloseTime == nil {
-                                    // Default to 9:00 PM when first enabled
-                                    var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-                                    comps.hour = 21; comps.minute = 0
-                                    viewModel.autoCloseTime = Calendar.current.date(from: comps)
-                                }
-                                viewModel.saveAutoCloseTime()
-                            }
-                        ))
-                        .tint(.accent)
-                        .labelsHidden()
-                    }
-
-                    // Time picker — only visible when enabled
-                    if viewModel.autoCloseEnabled {
-                        Divider().background(Color.gray.opacity(0.2))
-
-                        HStack {
-                            Text("Close at")
-                                .font(.subheadline)
-                                .foregroundColor(.white)
-                            Spacer()
-                            // Compact wheel-style time picker
-                            DatePicker(
-                                "",
-                                selection: Binding(
-                                    get: { viewModel.autoCloseTime ?? Date() },
-                                    set: { newTime in
-                                        viewModel.autoCloseTime = newTime
-                                        viewModel.saveAutoCloseTime()
-                                    }
-                                ),
-                                displayedComponents: .hourAndMinute
-                            )
-                            .datePickerStyle(.compact)
-                            .labelsHidden()
-                            .tint(.accent)
-                            .colorScheme(.dark)
-                        }
-
-                        // Friendly summary of what will happen
-                        HStack(spacing: 6) {
-                            Image(systemName: "moon.stars.fill")
-                                .font(.caption2)
-                                .foregroundColor(.accent)
-                            Text("Every night at this time, all barbers will be taken offline and the walk-in list will show no availability.")
-                                .font(.caption2)
-                                .foregroundColor(.gray)
-                        }
-                        .padding(10)
-                        .background(Color.accent.opacity(0.07))
-                        .cornerRadius(8)
-                    }
-                }
-                .padding(14)
-                .background(Color.brandInput)
-                .cornerRadius(14)
-
-                // ── Section label ────────────────────────────────────────────
-                HStack {
-                    Text("ACCOUNT")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.gray)
-                        .tracking(1.2)
-                    Spacer()
-                }
-                .padding(.top, 4)
-
-                // ── Reset Password card ──────────────────────────────────────
-                Button(action: { showResetPasswordConfirm = true }) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "lock.rotation")
-                            .font(.system(size: 16))
-                            .foregroundColor(.accent)
-                            .frame(width: 28)
-
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Reset Password")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                            Text("Send a reset link to your email")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.gray.opacity(0.5))
-                    }
-                    .padding(14)
-                    .background(Color.brandInput)
-                    .cornerRadius(14)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 32)
-        }
-    }
-
-    // MARK: - Shared UI Helpers
+    // MARK: - Shared Helpers
 
     private func sectionHeader(title: String, buttonLabel: String, action: @escaping () -> Void) -> some View {
         HStack {
@@ -544,19 +687,14 @@ struct ShopSettingsView: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.gray)
                 .tracking(1.2)
-
             Spacer()
-
             Button(action: action) {
                 HStack(spacing: 5) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 11, weight: .bold))
-                    Text(buttonLabel)
-                        .font(.system(size: 12, weight: .semibold))
+                    Image(systemName: "plus").font(.system(size: 11, weight: .bold))
+                    Text(buttonLabel).font(.system(size: 12, weight: .semibold))
                 }
                 .foregroundColor(.black)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
+                .padding(.horizontal, 12).padding(.vertical, 7)
                 .background(Color.accent)
                 .cornerRadius(8)
             }
@@ -564,8 +702,131 @@ struct ShopSettingsView: View {
         .padding(.top, 8)
     }
 
-    /// Shows the shop's unique code with a copy button.
-    /// Barbers need this code + their email to create their login in the Sign Up flow.
+    private func emptyState(icon: String, message: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: icon).font(.system(size: 32)).foregroundColor(.gray.opacity(0.4))
+            Text(message).font(.subheadline).foregroundColor(.gray).multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+}
+
+
+// MARK: - Shop Config
+
+struct ShopConfigView: View {
+
+    @ObservedObject var viewModel: ShopSettingsViewModel
+    @State private var showQRSheet = false
+    @State private var inviteCopied = false
+    @State private var waitLinkCopied = false
+
+    var body: some View {
+        ZStack {
+            Color.brandNearBlack.ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 16) {
+
+                    // ── Shop Code + QR + Live Queue ──────────────────────
+                    shopCodeBanner
+
+                    HStack {
+                        Text("SCHEDULE")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.gray)
+                            .tracking(1.2)
+                        Spacer()
+                    }
+                    .padding(.top, 8)
+
+                    // Auto-Close card
+                    VStack(alignment: .leading, spacing: 14) {
+
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Auto-Close Time")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                                Text("All barbers go offline automatically at this time every night. Individual barbers still control their own availability during the day.")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer()
+                            Toggle("", isOn: Binding(
+                                get: { viewModel.autoCloseEnabled },
+                                set: { enabled in
+                                    viewModel.autoCloseEnabled = enabled
+                                    if enabled && viewModel.autoCloseTime == nil {
+                                        var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+                                        comps.hour = 21; comps.minute = 0
+                                        viewModel.autoCloseTime = Calendar.current.date(from: comps)
+                                    }
+                                    viewModel.saveAutoCloseTime()
+                                }
+                            ))
+                            .tint(.accent)
+                            .labelsHidden()
+                        }
+
+                        if viewModel.autoCloseEnabled {
+                            Divider().background(Color.gray.opacity(0.2))
+
+                            HStack {
+                                Text("Close at")
+                                    .font(.subheadline)
+                                    .foregroundColor(.white)
+                                Spacer()
+                                DatePicker(
+                                    "",
+                                    selection: Binding(
+                                        get: { viewModel.autoCloseTime ?? Date() },
+                                        set: { newTime in
+                                            viewModel.autoCloseTime = newTime
+                                            viewModel.saveAutoCloseTime()
+                                        }
+                                    ),
+                                    displayedComponents: .hourAndMinute
+                                )
+                                .datePickerStyle(.compact)
+                                .labelsHidden()
+                                .tint(.accent)
+                                .colorScheme(.dark)
+                            }
+
+                            HStack(spacing: 6) {
+                                Image(systemName: "moon.stars.fill").font(.caption2).foregroundColor(.accent)
+                                Text("Every night at this time, all barbers will be taken offline and the walk-in list will show no availability.")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(10)
+                            .background(Color.accent.opacity(0.07))
+                            .cornerRadius(8)
+                        }
+                    }
+                    .padding(14)
+                    .background(Color.brandInput)
+                    .cornerRadius(14)
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 32)
+            }
+        }
+        .navigationTitle("Shop")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .sheet(isPresented: $showQRSheet) {
+            ShopCheckInQRSheet(shopId: viewModel.shopId)
+        }
+    }
+
+    // MARK: - Shop Code Banner
+
     private var shopCodeBanner: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
@@ -584,13 +845,8 @@ struct ShopSettingsView: View {
                     .foregroundColor(.white)
                     .lineLimit(1)
                     .truncationMode(.middle)
-
                 Spacer()
-
-                // Copy to clipboard button
-                Button(action: {
-                    UIPasteboard.general.string = viewModel.shopId
-                }) {
+                Button(action: { UIPasteboard.general.string = viewModel.shopId }) {
                     Image(systemName: "doc.on.doc")
                         .font(.system(size: 13))
                         .foregroundColor(.accent)
@@ -601,15 +857,11 @@ struct ShopSettingsView: View {
                 .font(.caption2)
                 .foregroundColor(.gray)
 
-            // Action buttons — side by side
             HStack(spacing: 10) {
-                // Check-in QR sheet
                 Button(action: { showQRSheet = true }) {
                     HStack(spacing: 6) {
-                        Image(systemName: "qrcode")
-                            .font(.system(size: 12))
-                        Text("Check-In QR")
-                            .font(.system(size: 12, weight: .semibold))
+                        Image(systemName: "qrcode").font(.system(size: 12))
+                        Text("Check-In QR").font(.system(size: 12, weight: .semibold))
                     }
                     .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
@@ -618,18 +870,13 @@ struct ShopSettingsView: View {
                     .cornerRadius(9)
                 }
 
-                // Open live queue in browser (great for casting to a TV)
                 Button(action: {
                     let urlString = "https://upnext-4ec7a.web.app/queue?shop=\(viewModel.shopId)"
-                    if let url = URL(string: urlString) {
-                        UIApplication.shared.open(url)
-                    }
+                    if let url = URL(string: urlString) { UIApplication.shared.open(url) }
                 }) {
                     HStack(spacing: 6) {
-                        Image(systemName: "tv")
-                            .font(.system(size: 12))
-                        Text("Live Queue")
-                            .font(.system(size: 12, weight: .semibold))
+                        Image(systemName: "tv").font(.system(size: 12))
+                        Text("Live Queue").font(.system(size: 12, weight: .semibold))
                     }
                     .foregroundColor(.accent)
                     .frame(maxWidth: .infinity)
@@ -639,52 +886,53 @@ struct ShopSettingsView: View {
                     .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.accent.opacity(0.3), lineWidth: 1))
                 }
             }
+
+            // Invite link — barbers tap this and land on /join with code pre-filled
+            Button(action: {
+                let inviteURL = "https://upnext-app.com/join?code=\(viewModel.shopId)"
+                UIPasteboard.general.string = inviteURL
+                inviteCopied = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { inviteCopied = false }
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: inviteCopied ? "checkmark" : "link")
+                        .font(.system(size: 12))
+                    Text(inviteCopied ? "Copied!" : "Copy Barber Invite Link")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundColor(inviteCopied ? .green : .accent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.accent.opacity(0.05))
+                .cornerRadius(9)
+                .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.accent.opacity(0.2), lineWidth: 1))
+            }
+
+            // Wait time link — share with customers so they can check the wait before walking in
+            Button(action: {
+                let waitURL = "https://upnext-app.com/wait?shop=\(viewModel.shopId)"
+                UIPasteboard.general.string = waitURL
+                waitLinkCopied = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { waitLinkCopied = false }
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: waitLinkCopied ? "checkmark" : "timer")
+                        .font(.system(size: 12))
+                    Text(waitLinkCopied ? "Copied!" : "Copy Wait Time Link")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundColor(waitLinkCopied ? .green : Color.yellow.opacity(0.9))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.yellow.opacity(0.05))
+                .cornerRadius(9)
+                .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.yellow.opacity(0.2), lineWidth: 1))
+            }
         }
         .padding(14)
         .background(Color.accent.opacity(0.07))
         .cornerRadius(12)
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.accent.opacity(0.2), lineWidth: 1))
-    }
-
-    private func signOutButton(action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: "rectangle.portrait.and.arrow.right")
-                Text("Sign Out")
-            }
-            .font(.system(size: 15, weight: .medium))
-            .foregroundColor(.red.opacity(0.8))
-            .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .background(Color.red.opacity(0.08))
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.red.opacity(0.2), lineWidth: 1)
-            )
-        }
-    }
-
-    private func emptyState(icon: String, message: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 32))
-                .foregroundColor(.gray.opacity(0.4))
-            Text(message)
-                .font(.subheadline)
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
-    }
-
-    private var loadingView: some View {
-        VStack(spacing: 12) {
-            ProgressView().tint(.accent)
-            Text("Loading settings...").font(.subheadline).foregroundColor(.gray)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -717,16 +965,15 @@ struct AddBarberSheet: View {
                                 .textFieldStyle(BrandTextFieldStyle())
                         }
 
-                        // Email field — used for the barber's login invite
+                        // Email field — used for the barber's app login (Firebase email auth)
                         VStack(alignment: .leading, spacing: 8) {
                             fieldLabel("Email (for app login)")
-                            TextField("barber@email.com", text: $email)
+                            TextField("barber@example.com", text: $email)
                                 .textFieldStyle(BrandTextFieldStyle())
                                 .keyboardType(.emailAddress)
                                 .textInputAutocapitalization(.never)
                                 .autocorrectionDisabled()
 
-                            // Explain what this email does
                             Text("The barber will use this email + your Shop Code to create their own login.")
                                 .font(.caption)
                                 .foregroundColor(.gray)
@@ -745,7 +992,7 @@ struct AddBarberSheet: View {
                         Button(action: {
                             viewModel.addBarber(
                                 name: name.trimmingCharacters(in: .whitespaces),
-                                email: email.trimmingCharacters(in: .whitespaces).lowercased(),
+                                email: email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
                                 barberType: barberType
                             )
                             dismiss()
@@ -833,12 +1080,26 @@ struct EditBarberSheet: View {
     @State private var selectedPhoto: UIImage? = nil
     @State private var isUploadingPhoto = false
 
+    // Save state — drives the Save button spinner + inline error alert.
+    // We hold these on the sheet (not the view model) so errors stay visible
+    // BEFORE the sheet dismisses. Previously the sheet closed instantly and
+    // any save error landed in the parent view where the user never saw it.
+    @State private var isSaving = false
+    @State private var saveError: String? = nil
+
+    // Local text field state for the booking URL. We bind the TextField to a
+    // plain @State String instead of a hand-rolled Binding(get:set:) on the
+    // optional `barber.bookingUrl` — that manual binding pattern was unreliable
+    // (the closures captured a snapshot of `self`, so edits didn't always
+    // propagate to the saved barber struct). Initialized in .onAppear, written
+    // back into `barber` at save time.
+    @State private var bookingUrlField: String = ""
+
     // Binding helpers for optional String fields
+    // Email is the barber's login identifier — what they use with Firebase Auth.
+    // Phone is retained on the Barber model for backward compat but is no longer collected here.
     private var emailBinding: Binding<String> {
         Binding(get: { barber.email ?? "" }, set: { barber.email = $0.isEmpty ? nil : $0 })
-    }
-    private var bookingUrlBinding: Binding<String> {
-        Binding(get: { barber.bookingUrl ?? "" }, set: { barber.bookingUrl = $0.isEmpty ? nil : $0 })
     }
 
     var body: some View {
@@ -859,20 +1120,27 @@ struct EditBarberSheet: View {
                                 .textFieldStyle(BrandTextFieldStyle())
                         }
 
-                        // --- Email ---
+                        // --- Email (for app login) ---
+                        // Matched against the barber's Firebase Auth email when they sign in
+                        // via the Barber app. Must be unique across the shop.
                         VStack(alignment: .leading, spacing: 8) {
                             fieldLabel("Email (for app login)")
-                            TextField("barber@email.com", text: emailBinding)
+                            TextField("barber@example.com", text: emailBinding)
                                 .textFieldStyle(BrandTextFieldStyle())
                                 .keyboardType(.emailAddress)
                                 .textInputAutocapitalization(.never)
                                 .autocorrectionDisabled()
+                            Text("The barber will use this email + your Shop Code to create their login.")
+                                .font(.caption)
+                                .foregroundColor(.gray)
                         }
 
                         // --- Booking URL ---
+                        // Bound to the local @State `bookingUrlField` (not directly
+                        // to barber.bookingUrl) — see note on `bookingUrlField` above.
                         VStack(alignment: .leading, spacing: 8) {
                             fieldLabel("Booking Site URL (optional)")
-                            TextField("https://square.site/...", text: bookingUrlBinding)
+                            TextField("https://square.site/...", text: $bookingUrlField)
                                 .textFieldStyle(BrandTextFieldStyle())
                                 .keyboardType(.URL)
                                 .textInputAutocapitalization(.never)
@@ -923,15 +1191,23 @@ struct EditBarberSheet: View {
 
                         Spacer(minLength: 20)
 
-                        Button(action: {
-                            viewModel.saveBarber(barber)
-                            dismiss()
-                        }) {
-                            Text("Save Changes")
-                                .font(.headline).foregroundColor(.black)
-                                .frame(maxWidth: .infinity).padding(.vertical, 16)
-                                .background(Color.accent).cornerRadius(14)
+                        // Save button — awaits the Firestore write so we can
+                        // surface errors INLINE (alert below) before dismissing
+                        // the sheet. The previous fire-and-forget version called
+                        // dismiss() immediately, so any save error landed in the
+                        // parent view's errorMessage and the user never saw it.
+                        Button(action: saveTapped) {
+                            HStack(spacing: 10) {
+                                if isSaving {
+                                    ProgressView().tint(.black)
+                                }
+                                Text(isSaving ? "Saving…" : "Save Changes")
+                                    .font(.headline).foregroundColor(.black)
+                            }
+                            .frame(maxWidth: .infinity).padding(.vertical, 16)
+                            .background(Color.accent).cornerRadius(14)
                         }
+                        .disabled(isSaving)
                     }
                     .padding(20)
                 }
@@ -941,15 +1217,34 @@ struct EditBarberSheet: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.foregroundColor(.accent)
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(.accent)
+                        .disabled(isSaving)
                 }
+            }
+            // Seed local field state from the barber when the sheet opens.
+            // Doing this here (vs. an init) keeps @State the source of truth.
+            .onAppear {
+                bookingUrlField = barber.bookingUrl ?? ""
+            }
+            // Inline save-error alert — fires when saveTapped catches an error.
+            .alert(
+                "Couldn't save barber",
+                isPresented: Binding(
+                    get: { saveError != nil },
+                    set: { if !$0 { saveError = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) { saveError = nil }
+            } message: {
+                Text(saveError ?? "")
             }
             // Photo picker sheet
             .sheet(isPresented: $showPhotoPicker) {
                 BarberPhotoPicker(selectedImage: $selectedPhoto)
             }
             // Upload photo when one is selected
-            .onChange(of: selectedPhoto) { image in
+            .onChange(of: selectedPhoto) { _, image in
                 guard let image = image, let barberId = barber.id else { return }
                 isUploadingPhoto = true
                 Task {
@@ -974,6 +1269,34 @@ struct EditBarberSheet: View {
         }
     }
 
+    // MARK: - Save
+
+    /// Awaits the Firestore write and only dismisses on success.
+    /// On failure, surfaces the error in the `saveError` alert so the
+    /// user actually sees what went wrong (e.g. permissions, network).
+    private func saveTapped() {
+        guard !isSaving else { return }
+
+        // Pull the latest text from the local field, trim whitespace,
+        // and write it back into the barber struct before saving.
+        // (Trimming matches what AccountSettingsView's saveBookingLink does
+        //  so the kiosk doesn't choke on a leading/trailing space in the URL.)
+        let trimmed = bookingUrlField.trimmingCharacters(in: .whitespacesAndNewlines)
+        barber.bookingUrl = trimmed.isEmpty ? nil : trimmed
+
+        isSaving = true
+        Task {
+            do {
+                try await viewModel.updateBarber(barber)
+                isSaving = false
+                dismiss()
+            } catch {
+                isSaving = false
+                saveError = error.localizedDescription
+            }
+        }
+    }
+
     // MARK: - Photo Section
 
     private var photoSection: some View {
@@ -987,14 +1310,12 @@ struct EditBarberSheet: View {
                 if isUploadingPhoto {
                     ProgressView().tint(.accent)
                 } else if let photo = selectedPhoto {
-                    // Newly picked photo (not yet saved URL)
                     Image(uiImage: photo)
                         .resizable()
                         .scaledToFill()
                         .frame(width: 88, height: 88)
                         .clipShape(Circle())
                 } else if let urlString = barber.photoUrl, let url = URL(string: urlString) {
-                    // Existing photo from Firebase Storage
                     AsyncImage(url: url) { image in
                         image.resizable().scaledToFill()
                     } placeholder: {
@@ -1003,7 +1324,6 @@ struct EditBarberSheet: View {
                     .frame(width: 88, height: 88)
                     .clipShape(Circle())
                 } else {
-                    // No photo yet — show initial
                     Text(String(barber.name.prefix(1)).uppercased())
                         .font(.system(size: 32, weight: .bold))
                         .foregroundColor(.gray)
@@ -1076,7 +1396,6 @@ struct AddServiceSheet: View {
                         }
                     }
 
-                    // Note about price visibility
                     Text("Leave price blank to hide pricing on the kiosk.")
                         .font(.caption)
                         .foregroundColor(.gray)
@@ -1195,7 +1514,6 @@ struct EditServiceSheet: View {
                     Spacer()
 
                     Button(action: {
-                        // Convert price text back to Double? before saving
                         service.price = Double(priceText)
                         viewModel.saveService(service)
                         dismiss()
@@ -1236,7 +1554,6 @@ struct EditServiceSheet: View {
 // MARK: - Brand Text Field Style
 
 /// Reusable text field styling that matches the UpNext dark theme.
-/// Use this on any TextField in the barber app.
 struct BrandTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
@@ -1266,8 +1583,8 @@ struct BarberPhotoPicker: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var config = PHPickerConfiguration()
-        config.filter = .images           // Photos only — no videos
-        config.selectionLimit = 1         // One photo per barber
+        config.filter = .images
+        config.selectionLimit = 1
         let picker = PHPickerViewController(configuration: config)
         picker.delegate = context.coordinator
         return picker
@@ -1304,14 +1621,22 @@ struct BarberPhotoPicker: UIViewControllerRepresentable {
 // MARK: - Shop Check-In QR Sheet
 
 /// Full-screen sheet showing the QR code for this shop's check-in page.
-/// Owners can screenshot or let customers scan it directly from the phone.
 struct ShopCheckInQRSheet: View {
 
     let shopId: String
     @Environment(\.dismiss) private var dismiss
 
+    // Loaded async when the sheet appears so the printable poster can
+    // include the shop's actual name. Falls back to a generic subtitle.
+    @State private var shopName: String = ""
+
+    // Drives the system share sheet used for saving / printing the PDF.
+    @State private var posterURL: URL? = nil
+    @State private var showShareSheet: Bool = false
+    @State private var isBuildingPoster: Bool = false
+
     private var checkInURL: String {
-        "https://upnext-4ec7a.web.app/checkin?shop=\(shopId)"
+        "https://upnext-4ec7a.web.app/checkin?shop=\(shopId)&source=qr"
     }
 
     var body: some View {
@@ -1319,7 +1644,6 @@ struct ShopCheckInQRSheet: View {
             Color.black.ignoresSafeArea()
 
             VStack(spacing: 28) {
-                // Header
                 HStack {
                     Spacer()
                     Button(action: { dismiss() }) {
@@ -1333,7 +1657,6 @@ struct ShopCheckInQRSheet: View {
 
                 Spacer()
 
-                // Logo
                 HStack(spacing: 8) {
                     UpNextMark(size: 20)
                     HStack(spacing: 0) {
@@ -1342,7 +1665,6 @@ struct ShopCheckInQRSheet: View {
                     }
                 }
 
-                // Title
                 VStack(spacing: 6) {
                     Text("Check-In QR Code")
                         .font(.system(size: 22, weight: .bold))
@@ -1353,7 +1675,6 @@ struct ShopCheckInQRSheet: View {
                         .multilineTextAlignment(.center)
                 }
 
-                // QR code
                 if let qrImage = generateQR(from: checkInURL) {
                     Image(uiImage: qrImage)
                         .interpolation(.none)
@@ -1369,20 +1690,16 @@ struct ShopCheckInQRSheet: View {
                         .frame(width: 240, height: 240)
                 }
 
-                // URL label
                 Text(checkInURL)
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.gray)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
 
-                // Copy link button
                 Button(action: { UIPasteboard.general.string = checkInURL }) {
                     HStack(spacing: 8) {
-                        Image(systemName: "link")
-                            .font(.system(size: 13))
-                        Text("Copy Check-In Link")
-                            .font(.system(size: 14, weight: .semibold))
+                        Image(systemName: "link").font(.system(size: 13))
+                        Text("Copy Check-In Link").font(.system(size: 14, weight: .semibold))
                     }
                     .foregroundColor(.accent)
                     .frame(maxWidth: .infinity)
@@ -1393,22 +1710,246 @@ struct ShopCheckInQRSheet: View {
                 }
                 .padding(.horizontal, 32)
 
+                // ── Printable Poster ────────────────────────────────────────
+                // Generates a print-ready US-Letter PDF with this shop's QR
+                // plus "Scan to check in" headline. Owners can AirPrint it
+                // directly or save it to Files to print at a shop later.
+                Button(action: { buildAndSharePoster() }) {
+                    HStack(spacing: 8) {
+                        if isBuildingPoster {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .black))
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "printer.fill").font(.system(size: 13))
+                        }
+                        Text(isBuildingPoster ? "Preparing…" : "Download Printable Poster")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.accent)
+                    .cornerRadius(12)
+                }
+                .disabled(isBuildingPoster)
+                .padding(.horizontal, 32)
+
                 Spacer()
+            }
+        }
+        .task {
+            // Grab the shop name once so we can stamp it on the poster.
+            // Non-fatal if it fails — the generator handles an empty name.
+            if shopName.isEmpty {
+                if let shop = try? await FirebaseService.shared.fetchShop(shopId: shopId) {
+                    shopName = shop.name
+                }
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let url = posterURL {
+                ShareSheet(items: [url])
             }
         }
     }
 
-    /// Uses CoreImage to generate a QR code image from the given string.
+    // MARK: - Poster
+
+    /// Builds the PDF off the main thread (to keep the UI responsive while
+    /// CoreImage renders the QR) then presents the system share sheet.
+    private func buildAndSharePoster() {
+        guard !isBuildingPoster else { return }
+        isBuildingPoster = true
+
+        let name = shopName
+        let url = checkInURL
+
+        Task.detached(priority: .userInitiated) {
+            let pdfURL = CheckInPosterGenerator.makePDF(shopName: name, checkInURL: url)
+            await MainActor.run {
+                self.isBuildingPoster = false
+                if let pdfURL {
+                    self.posterURL = pdfURL
+                    self.showShareSheet = true
+                }
+            }
+        }
+    }
+
     private func generateQR(from string: String) -> UIImage? {
         let context = CIContext()
         let filter = CIFilter.qrCodeGenerator()
         filter.message = Data(string.utf8)
         filter.correctionLevel = "H"
         guard let output = filter.outputImage else { return nil }
-        // Scale up so it renders sharply
         let scaled = output.transformed(by: CGAffineTransform(scaleX: 10, y: 10))
         guard let cgImage = context.createCGImage(scaled, from: scaled.extent) else { return nil }
         return UIImage(cgImage: cgImage)
+    }
+}
+
+
+// MARK: - Barber Settings Sheet
+//
+// The standalone settings screen for barbers (accessed from BarberQueueView).
+// Owners have the full ShopSettingsView; barbers just need account + notifications + sign out.
+
+struct BarberSettingsSheet: View {
+
+    var barber: Barber?
+    var appUser: AppUser?
+    var onDone: () -> Void
+    var onSignOut: () -> Void
+
+    @State private var notificationsEnabled: Bool = true
+    @State private var showResetAlert: Bool = false
+    @State private var resetEmail: String = ""
+    @State private var resetEmailSent: Bool = false
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.brandNearBlack.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 20) {
+
+                        // ── Account ───────────────────────────────────────
+                        VStack(spacing: 0) {
+                            if let barber {
+                                HStack {
+                                    Text("Name")
+                                        .font(.subheadline)
+                                        .foregroundColor(.white)
+                                    Spacer()
+                                    Text(barber.name)
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 12)
+
+                                Divider().background(Color.gray.opacity(0.15)).padding(.leading, 14)
+                            }
+
+                            // Reset Password
+                            Button(action: { showResetAlert = true }) {
+                                HStack {
+                                    Text("Reset Password")
+                                        .font(.subheadline)
+                                        .foregroundColor(.white)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(.gray.opacity(0.4))
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 12)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                        .background(Color.brandInput)
+                        .cornerRadius(14)
+
+                        // ── Notifications ─────────────────────────────────
+                        VStack(spacing: 0) {
+                            HStack(spacing: 14) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.accent.opacity(0.12))
+                                        .frame(width: 36, height: 36)
+                                    Image(systemName: "bell.fill")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.accent)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Walk-In Alerts")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                    Text("Get notified when a customer checks in")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                                Spacer()
+                                Toggle("", isOn: $notificationsEnabled)
+                                    .tint(.accent)
+                                    .labelsHidden()
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                        }
+                        .background(Color.brandInput)
+                        .cornerRadius(14)
+
+                        // ── Sign Out ──────────────────────────────────────
+                        Button(action: onSignOut) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "rectangle.portrait.and.arrow.right")
+                                Text("Sign Out")
+                            }
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.red.opacity(0.8))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(Color.red.opacity(0.08))
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 32)
+                }
+            }
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { onDone() }
+                        .foregroundColor(.accent)
+                }
+            }
+        }
+        .onAppear {
+            notificationsEnabled = appUser?.wantsNotifications ?? true
+            resetEmail = appUser?.email ?? ""
+        }
+        .onChange(of: notificationsEnabled) { _, newValue in
+            guard let userId = appUser?.id else { return }
+            Task {
+                try? await FirebaseService.shared.updateNotificationPreference(
+                    userId: userId,
+                    enabled: newValue
+                )
+            }
+        }
+        .alert("Reset Password", isPresented: $showResetAlert) {
+            TextField("Your email address", text: $resetEmail)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+            Button("Send Reset Link") {
+                Task {
+                    try? await Auth.auth().sendPasswordReset(
+                        withEmail: resetEmail.trimmingCharacters(in: .whitespaces)
+                    )
+                    resetEmailSent = true
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("We'll send a reset link to your email.")
+        }
+        .alert("Check Your Email", isPresented: $resetEmailSent) {
+            Button("Got it", role: .cancel) {}
+        } message: {
+            Text("A reset link has been sent. Check your inbox.")
+        }
     }
 }
 
@@ -1419,4 +1960,264 @@ struct ShopCheckInQRSheet: View {
     ShopSettingsView(
         viewModel: ShopSettingsViewModel(shopId: "test-shop")
     )
+}
+
+
+// MARK: - History View
+
+/// Browse any past day's full sign-in sheet — walk-ins and appointments, who served whom.
+/// Reads from the queueHistory collection, which stores all archived (completed/removed) entries.
+struct HistoryView: View {
+
+    let shopId: String
+
+    // Selected date — defaults to yesterday so there's something to look at on first open
+    @State private var selectedDate: Date = Calendar.current.date(
+        byAdding: .day, value: -1, to: Calendar.current.startOfDay(for: Date())
+    ) ?? Date()
+
+    @State private var entries:  [QueueEntry] = []
+    @State private var barbers:  [Barber]     = []
+    @State private var isLoading = false
+    @State private var errorMsg: String?      = nil
+
+    private let firebase = FirebaseService.shared
+
+    var body: some View {
+        ZStack {
+            Color.brandNearBlack.ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 16) {
+
+                    // Date picker
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Select a date")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.45))
+                        DatePicker(
+                            "",
+                            selection: $selectedDate,
+                            in: ...Calendar.current.startOfDay(for: Date()),
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                        .colorScheme(.dark)
+                        .onChange(of: selectedDate) { _, _ in
+                            Task { await loadEntries() }
+                        }
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14))
+
+                    // Summary + list
+                    if isLoading {
+                        ProgressView().tint(.white).padding(.top, 40)
+
+                    } else if let err = errorMsg {
+                        Text(err)
+                            .font(.subheadline)
+                            .foregroundStyle(.red.opacity(0.7))
+                            .padding(.top, 40)
+
+                    } else if entries.isEmpty {
+                        VStack(spacing: 10) {
+                            Image(systemName: "calendar.badge.exclamationmark")
+                                .font(.system(size: 36))
+                                .foregroundStyle(.white.opacity(0.2))
+                            Text("No entries for this day")
+                                .font(.subheadline)
+                                .foregroundStyle(.white.opacity(0.35))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 60)
+
+                    } else {
+                        // Stats summary row
+                        let done    = entries.filter { $0.status == .completed }.count
+                        let left    = entries.filter { $0.status == .walkedOut || $0.status == .removed }.count
+                        HStack(spacing: 12) {
+                            summaryPill("\(entries.count) Total",  color: .white.opacity(0.5))
+                            summaryPill("\(done) Served",         color: Color.accent)
+                            if left > 0 {
+                                summaryPill("\(left) Left",       color: .red.opacity(0.7))
+                            }
+                        }
+
+                        // Entry list
+                        VStack(spacing: 0) {
+                            ForEach(Array(entries.enumerated()), id: \.element.id) { idx, entry in
+                                historyRow(entry: entry, rowIndex: idx)
+                                if idx < entries.count - 1 {
+                                    Divider()
+                                        .background(Color.white.opacity(0.07))
+                                        .padding(.leading, 56)
+                                }
+                            }
+                        }
+                        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                    }
+                }
+                .padding(16)
+            }
+        }
+        .navigationTitle(selectedDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.brandNearBlack, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .task { await loadEntries() }
+    }
+
+    // MARK: - Row
+
+    @ViewBuilder
+    private func historyRow(entry: QueueEntry, rowIndex: Int) -> some View {
+        let isDone  = entry.status == .completed
+        let isOut   = entry.status == .walkedOut || entry.status == .removed
+        let fade    = isDone || isOut
+        let barber  = barbers.first { $0.id == (entry.assignedBarberId ?? entry.barberId) }
+
+        HStack(spacing: 12) {
+            // Position
+            Text("#\(rowIndex + 1)")
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundStyle(fade ? .white.opacity(0.25) : .white.opacity(0.6))
+                .frame(width: 36, alignment: .leading)
+
+            // Name + detail
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(entry.customerName)
+                        .font(.subheadline.weight(fade ? .regular : .semibold))
+                        .strikethrough(fade)
+                        .foregroundStyle(fade ? .white.opacity(0.3) : .white)
+                    // Appointment badge
+                    if entry.isAppointment == true {
+                        Text("Appt")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.blue)
+                            .padding(.horizontal, 5).padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.15), in: Capsule())
+                    }
+                    // Remote badge — shows arrival status for website check-ins
+                    if entry.isRemoteCheckIn == true {
+                        if entry.remoteStatus == "arrived" {
+                            Text("✅ Arrived")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.green)
+                                .padding(.horizontal, 5).padding(.vertical, 2)
+                                .background(Color.green.opacity(0.15), in: Capsule())
+                        } else {
+                            Text("📍 On the Way")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.orange)
+                                .padding(.horizontal, 5).padding(.vertical, 2)
+                                .background(Color.orange.opacity(0.15), in: Capsule())
+                        }
+                    }
+                }
+
+                Group {
+                    if isDone, let b = barber {
+                        Label("Served by \(b.name)", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(Color.accent.opacity(0.8))
+                    } else if isOut {
+                        Label("Walked out", systemImage: "person.fill.xmark")
+                            .foregroundStyle(.red.opacity(0.6))
+                    } else {
+                        Text(entry.checkInTime, format: .dateTime.hour().minute())
+                            .foregroundStyle(.white.opacity(0.35))
+                    }
+                }
+                .font(.caption)
+            }
+
+            Spacer()
+
+            // Status chip
+            statusChip(for: entry.status)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .opacity(isOut ? 0.5 : 1.0)
+    }
+
+    private func summaryPill(_ label: String, color: Color) -> some View {
+        Text(label)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .background(color.opacity(0.1), in: Capsule())
+    }
+
+    @ViewBuilder
+    private func statusChip(for status: QueueStatus) -> some View {
+        switch status {
+        case .completed:
+            chipView("Done",    color: .gray)
+        case .walkedOut:
+            chipView("Left",    color: .red)
+        case .removed:
+            chipView("Removed", color: .red)
+        case .inChair:
+            chipView("In Chair", color: Color.accent)
+        case .waiting:
+            chipView("Waiting", color: .orange)
+        case .notified:
+            chipView("Notified", color: .blue)
+        }
+    }
+
+    private func chipView(_ label: String, color: Color) -> some View {
+        Text(label)
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(color)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(color.opacity(0.15), in: Capsule())
+    }
+
+    // MARK: - Data Loading
+
+    private func loadEntries() async {
+        isLoading = true
+        errorMsg  = nil
+
+        let start = Calendar.current.startOfDay(for: selectedDate)
+        let end   = Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start
+
+        do {
+            // Fetch barbers once for name attribution
+            if barbers.isEmpty {
+                barbers = try await firebase.fetchAllBarbers(shopId: shopId)
+            }
+
+            // Pull all archived entries for the selected day
+            let all = try await firebase.fetchArchivedEntries(shopId: shopId, since: start)
+            entries = all
+                .filter { $0.checkInTime < end }   // Cap at end of selected day
+                .sorted { $0.checkInTime < $1.checkInTime }
+        } catch {
+            errorMsg = "Couldn't load history. Check your connection."
+        }
+
+        isLoading = false
+    }
+}
+
+// MARK: - Phone Formatting Helper
+
+/// Convert a user-typed phone number to E.164 format (+1XXXXXXXXXX).
+/// Used in AddBarberSheet so the number stored in Firestore matches
+/// exactly what the barber will type when logging in.
+private func formatPhoneE164(_ number: String) -> String {
+    let digits = number.filter { $0.isNumber }
+    if digits.count == 10 {
+        return "+1\(digits)"
+    } else if digits.count == 11 && digits.hasPrefix("1") {
+        return "+\(digits)"
+    }
+    return number  // Already formatted or international — pass through
 }

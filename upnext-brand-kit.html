@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UpNext — Brand Kit</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --deep:     #0D2B1A;
+  --deep2:    #0A2215;
+  --green:    #2ECC71;
+  --green-dk: #1BA355;
+  --gg:       #8BA898;
+  --black:    #0D0D0D;
+  --white:    #FFFFFF;
+  --dot-bg:   #2A4A35;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #1a1a1a;
+  color: var(--white);
+  padding: 0;
+}
+
+/* ── PAGE HEADER ── */
+.kit-header {
+  background: var(--deep2);
+  border-bottom: 1px solid rgba(46,204,113,0.1);
+  padding: 40px 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kit-header-logo { display: flex; align-items: center; gap: 16px; }
+.kit-header-dots { display: flex; flex-direction: column; gap: 5px; }
+.kit-header-dots .d { border-radius: 4px; }
+.kit-header-dots .d1 { width: 8px; height: 8px; border-radius: 50%; background: var(--dot-bg); }
+.kit-header-dots .d2 { width: 24px; height: 8px; background: var(--green); }
+.kit-header-dots .d3 { width: 16px; height: 8px; background: var(--dot-bg); }
+.kit-header-wm { font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; }
+.kit-header-wm .up { color: white; }
+.kit-header-wm .nx { color: var(--gg); }
+
+.kit-meta { text-align: right; }
+.kit-meta .version { font-size: 11px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--green); }
+.kit-meta .date { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 4px; }
+
+/* ── LAYOUT ── */
+.kit-body { padding: 64px; max-width: 1200px; margin: 0 auto; }
+
+.kit-section { margin-bottom: 72px; }
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 28px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.section-num {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green);
+  letter-spacing: 0.15em;
+}
+
+.section-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+  letter-spacing: -0.01em;
+}
+
+/* ── LOGO GRID ── */
+.logo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.logo-card {
+  border-radius: 16px;
+  padding: 40px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.logo-card.on-deep  { background: var(--deep); border: 1px solid rgba(255,255,255,0.04); }
+.logo-card.on-black { background: var(--black); border: 1px solid rgba(255,255,255,0.04); }
+.logo-card.on-white { background: #fff; }
+.logo-card.on-green { background: var(--green); }
+.logo-card.on-deep2 { background: #061410; border: 1px solid rgba(46,204,113,0.08); }
+
+.logo-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.4;
+  align-self: flex-end;
+}
+.on-white .logo-label { opacity: 0.3; color: #000; }
+
+/* Logo component */
+.logo { display: flex; align-items: center; }
+.logo .dots { display: flex; flex-direction: column; gap: 5px; margin-right: 16px; }
+.logo .dot { border-radius: 4px; }
+.logo .dot.d1 { width: 8px; height: 8px; border-radius: 50%; }
+.logo .dot.d2 { width: 26px; height: 8px; }
+.logo .dot.d3 { width: 16px; height: 8px; }
+.logo .wm { font-family: 'Outfit', sans-serif; font-size: 30px; font-weight: 600; letter-spacing: -0.025em; line-height: 1; }
+
+/* Colorway variants */
+.cw-deep .d1, .cw-deep .d3 { background: var(--dot-bg); }
+.cw-deep .d2 { background: var(--green); }
+.cw-deep .up { color: white; } .cw-deep .nx { color: var(--gg); }
+
+.cw-black .d1, .cw-black .d3 { background: #2A2A2A; }
+.cw-black .d2 { background: var(--green); }
+.cw-black .up { color: white; } .cw-black .nx { color: var(--green); }
+
+.cw-light .d1, .cw-light .d3 { background: #DDD; }
+.cw-light .d2 { background: var(--green); }
+.cw-light .up { color: #0D0D0D; } .cw-light .nx { color: var(--green-dk); }
+
+.cw-green .d1, .cw-green .d3 { background: rgba(255,255,255,0.3); }
+.cw-green .d2 { background: white; }
+.cw-green .up { color: white; } .cw-green .nx { color: rgba(255,255,255,0.7); }
+
+.cw-ultra .d1, .cw-ultra .d3 { background: #0F3D22; }
+.cw-ultra .d2 { background: var(--green); }
+.cw-ultra .up { color: white; } .cw-ultra .nx { color: var(--gg); }
+
+/* ── APP ICONS ── */
+.icon-grid {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.icon-item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+.icon-shape {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.icon-shape.rounded { border-radius: 22.4%; }
+.icon-shape::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* Deep green icon */
+.icon-deep { background: var(--deep); }
+/* Pure green icon */
+.icon-green { background: linear-gradient(135deg, #2ECC71 0%, #1BA355 100%); }
+/* Black icon */
+.icon-black { background: var(--black); }
+/* Ultra dark */
+.icon-ultra { background: #061410; }
+
+/* Icon sizes */
+.icon-1024 { width: 160px; height: 160px; border-radius: 36px; }
+.icon-512  { width: 100px; height: 100px; border-radius: 22px; }
+.icon-256  { width: 64px;  height: 64px;  border-radius: 14px; }
+.icon-128  { width: 44px;  height: 44px;  border-radius: 10px; }
+.icon-64   { width: 32px;  height: 32px;  border-radius: 7px; }
+.icon-32   { width: 24px;  height: 24px;  border-radius: 5px; }
+
+/* Icon mark inside */
+.icon-mark { display: flex; flex-direction: column; gap: 0; align-items: flex-start; }
+
+.icon-dot { border-radius: 3px; flex-shrink: 0; }
+.icon-dot.id1 { border-radius: 50%; }
+
+/* 1024 */
+.icon-1024 .icon-dot.id1 { width: 14px; height: 14px; margin-bottom: 9px; }
+.icon-1024 .icon-dot.id2 { width: 46px; height: 14px; margin-bottom: 9px; }
+.icon-1024 .icon-dot.id3 { width: 28px; height: 14px; }
+
+/* 512 */
+.icon-512 .icon-dot.id1 { width: 9px; height: 9px; margin-bottom: 6px; }
+.icon-512 .icon-dot.id2 { width: 28px; height: 9px; margin-bottom: 6px; }
+.icon-512 .icon-dot.id3 { width: 18px; height: 9px; }
+
+/* 256 */
+.icon-256 .icon-dot.id1 { width: 6px; height: 6px; margin-bottom: 4px; }
+.icon-256 .icon-dot.id2 { width: 18px; height: 6px; margin-bottom: 4px; }
+.icon-256 .icon-dot.id3 { width: 11px; height: 6px; }
+
+/* 128 */
+.icon-128 .icon-dot.id1 { width: 4px; height: 4px; margin-bottom: 3px; }
+.icon-128 .icon-dot.id2 { width: 13px; height: 4px; margin-bottom: 3px; }
+.icon-128 .icon-dot.id3 { width: 8px; height: 4px; }
+
+/* 64 */
+.icon-64 .icon-dot.id1 { width: 3px; height: 3px; margin-bottom: 2px; }
+.icon-64 .icon-dot.id2 { width: 9px; height: 3px; margin-bottom: 2px; }
+.icon-64 .icon-dot.id3 { width: 6px; height: 3px; }
+
+/* 32 */
+.icon-32 .icon-dot.id1 { width: 2px; height: 2px; margin-bottom: 2px; }
+.icon-32 .icon-dot.id2 { width: 7px; height: 2px; margin-bottom: 2px; }
+.icon-32 .icon-dot.id3 { width: 4px; height: 2px; }
+
+/* icon dot colors */
+.icon-deep .icon-dot.id1, .icon-deep .icon-dot.id3 { background: var(--dot-bg); }
+.icon-deep .icon-dot.id2 { background: var(--green); }
+
+.icon-green .icon-dot.id1, .icon-green .icon-dot.id3 { background: rgba(255,255,255,0.35); }
+.icon-green .icon-dot.id2 { background: white; }
+
+.icon-black .icon-dot.id1, .icon-black .icon-dot.id3 { background: #2A2A2A; }
+.icon-black .icon-dot.id2 { background: var(--green); }
+
+.icon-ultra .icon-dot.id1, .icon-ultra .icon-dot.id3 { background: #0F3D22; }
+.icon-ultra .icon-dot.id2 { background: var(--green); }
+
+.icon-size-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.25);
+}
+
+.icon-row-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* ── COLOR PALETTE ── */
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+}
+
+.color-chip { display: flex; flex-direction: column; gap: 12px; }
+
+.color-swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  position: relative;
+}
+
+.color-swatch.new-color::after {
+  content: 'NEW';
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--green);
+  color: white;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 2px 5px;
+  border-radius: 100px;
+}
+
+.color-info {}
+.color-name { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); margin-bottom: 3px; }
+.color-hex  { font-size: 11px; font-family: 'DM Mono', monospace; color: rgba(255,255,255,0.3); }
+.color-role { font-size: 10px; color: rgba(255,255,255,0.2); margin-top: 3px; }
+
+/* ── TYPOGRAPHY ── */
+.type-showcase { display: flex; flex-direction: column; gap: 32px; }
+.type-row { display: flex; flex-direction: column; gap: 6px; }
+.type-sample { line-height: 1.1; }
+.type-meta { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.25); }
+
+/* ── USAGE RULES ── */
+.rules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.rule-card {
+  border-radius: 14px;
+  padding: 24px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.02);
+}
+.rule-card.do { border-color: rgba(46,204,113,0.2); }
+.rule-card.dont { border-color: rgba(255,80,80,0.15); }
+.rule-header { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 12px; }
+.rule-card.do .rule-header { color: var(--green); }
+.rule-card.dont .rule-header { color: #FF5050; }
+.rule-item { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 8px; padding-left: 16px; position: relative; }
+.rule-item::before { content: ''; position: absolute; left: 0; top: 6px; width: 6px; height: 6px; border-radius: 50%; }
+.rule-card.do .rule-item::before { background: var(--green); }
+.rule-card.dont .rule-item::before { background: #FF5050; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="kit-header">
+  <div class="kit-header-logo">
+    <div class="kit-header-dots">
+      <div class="d d1"></div>
+      <div class="d d2"></div>
+      <div class="d d3"></div>
+    </div>
+    <div class="kit-header-wm"><span class="up">Up</span><span class="nx">Next</span></div>
+  </div>
+  <div class="kit-meta">
+    <div class="version">Brand Kit v2.0</div>
+    <div class="date">March 2026</div>
+  </div>
+</div>
+
+<div class="kit-body">
+
+  <!-- 01 LOGO VARIATIONS -->
+  <div class="kit-section">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <span class="section-title">Logo Variations</span>
+    </div>
+    <div class="logo-grid">
+
+      <div class="logo-card on-deep">
+        <div class="logo cw-deep">
+          <div class="dots"><div class="dot d1"></div><div class="dot d2"></div><div class="dot d3"></div></div>
+          <div class="wm"><span class="up">Up</span><span class="nx">Next</span></div>
+        </div>
+        <div class="logo-label">Deep Green · Primary ★</div>
+      </div>
+
+      <div class="logo-card on-deep2">
+        <div class="logo cw-ultra">
+          <div class="dots"><div class="dot d1"></div><div class="dot d2"></div><div class="dot d3"></div></div>
+          <div class="wm"><span class="up">Up</span><span class="nx">Next</span></div>
+        </div>
+        <div class="logo-label">Ultra Dark</div>
+      </div>
+
+      <div class="logo-card on-black">
+        <div class="logo cw-black">
+          <div class="dots"><div class="dot d1"></div><div class="dot d2"></div><div class="dot d3"></div></div>
+          <div class="wm"><span class="up">Up</span><span class="nx">Next</span></div>
+        </div>
+        <div class="logo-label">Near Black</div>
+      </div>
+
+      <div class="logo-card on-white">
+        <div class="logo cw-light">
+          <div class="dots"><div class="dot d1"></div><div class="dot d2"></div><div class="dot d3"></div></div>
+          <div class="wm"><span class="up">Up</span><span class="nx">Next</span></div>
+        </div>
+        <div class="logo-label" style="color:#000;">Light</div>
+      </div>
+
+      <div class="logo-card on-green">
+        <div class="logo cw-green">
+          <div class="dots"><div class="dot d1"></div><div class="dot d2"></div><div class="dot d3"></div></div>
+          <div class="wm"><span class="up">Up</span><span class="nx">Next</span></div>
+        </div>
+        <div class="logo-label" style="color:rgba(255,255,255,0.5);">On Green</div>
+      </div>
+
+      <!-- Stacked version -->
+      <div class="logo-card on-deep" style="align-items:center; justify-content:center;">
+        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;">
+          <div style="font-family:'Outfit',sans-serif;font-size:44px;font-weight:800;letter-spacing:-0.04em;color:var(--green);line-height:1;">Up</div>
+          <div style="font-family:'Outfit',sans-serif;font-size:44px;font-weight:300;letter-spacing:-0.04em;color:var(--gg);line-height:1;">Next</div>
+          <div style="font-size:9px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:rgba(139,168,152,0.35);margin-top:6px;">Walk-in Management</div>
+        </div>
+        <div class="logo-label">Stacked</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 02 APP ICONS -->
+  <div class="kit-section">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <span class="section-title">App Icons</span>
+    </div>
+
+    <!-- Row 1: Deep green -->
+    <span class="icon-row-label">Deep Green (Primary)</span>
+    <div class="icon-grid" style="margin-bottom:32px;">
+      <div class="icon-item">
+        <div class="icon-shape icon-deep icon-1024">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">1024</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-deep icon-512">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">512</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-deep icon-256">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">256</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-deep icon-128">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">128</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-deep icon-64">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">64</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-deep icon-32">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">32</div>
+      </div>
+    </div>
+
+    <!-- Row 2: Green gradient -->
+    <span class="icon-row-label">Accent Green (Alt)</span>
+    <div class="icon-grid" style="margin-bottom:32px;">
+      <div class="icon-item">
+        <div class="icon-shape icon-green icon-1024">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">1024</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-green icon-512">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">512</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-green icon-256">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">256</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-green icon-128">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">128</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-green icon-64">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">64</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-green icon-32">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">32</div>
+      </div>
+    </div>
+
+    <!-- Row 3: Black -->
+    <span class="icon-row-label">Near Black (Dark Mode)</span>
+    <div class="icon-grid">
+      <div class="icon-item">
+        <div class="icon-shape icon-black icon-1024">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">1024</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-black icon-512">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">512</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-black icon-256">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">256</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-black icon-128">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">128</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-black icon-64">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">64</div>
+      </div>
+      <div class="icon-item">
+        <div class="icon-shape icon-black icon-32">
+          <div class="icon-mark">
+            <div class="icon-dot id1"></div>
+            <div class="icon-dot id2"></div>
+            <div class="icon-dot id3"></div>
+          </div>
+        </div>
+        <div class="icon-size-label">32</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 COLOR PALETTE -->
+  <div class="kit-section">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <span class="section-title">Color Palette</span>
+    </div>
+    <div class="palette-grid">
+      <div class="color-chip">
+        <div class="color-swatch" style="background:#0D2B1A;"></div>
+        <div class="color-info">
+          <div class="color-name">Deep Green</div>
+          <div class="color-hex">#0D2B1A</div>
+          <div class="color-role">Primary BG</div>
+        </div>
+      </div>
+      <div class="color-chip">
+        <div class="color-swatch" style="background:#2ECC71;"></div>
+        <div class="color-info">
+          <div class="color-name">Accent Green</div>
+          <div class="color-hex">#2ECC71</div>
+          <div class="color-role">CTAs · Active</div>
+        </div>
+      </div>
+      <div class="color-chip">
+        <div class="color-swatch" style="background:#1BA355;"></div>
+        <div class="color-info">
+          <div class="color-name">Green Dark</div>
+          <div class="color-hex">#1BA355</div>
+          <div class="color-role">Hover States</div>
+        </div>
+      </div>
+      <div class="color-chip">
+        <div class="color-swatch new-color" style="background:#8BA898;"></div>
+        <div class="color-info">
+          <div class="color-name">Grey-Green</div>
+          <div class="color-hex">#8BA898</div>
+          <div class="color-role">Secondary Text</div>
+        </div>
+      </div>
+      <div class="color-chip">
+        <div class="color-swatch" style="background:#0D0D0D; border:1px solid #333;"></div>
+        <div class="color-info">
+          <div class="color-name">Near Black</div>
+          <div class="color-hex">#0D0D0D</div>
+          <div class="color-role">Alt BG</div>
+        </div>
+      </div>
+      <div class="color-chip">
+        <div class="color-swatch" style="background:#FFFFFF; border:1px solid #333;"></div>
+        <div class="color-info">
+          <div class="color-name">White</div>
+          <div class="color-hex">#FFFFFF</div>
+          <div class="color-role">Text · Light BG</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 04 TYPOGRAPHY -->
+  <div class="kit-section">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <span class="section-title">Typography</span>
+    </div>
+    <div style="background:var(--deep);border-radius:16px;padding:40px 40px;border:1px solid rgba(255,255,255,0.04);">
+      <div class="type-showcase">
+        <div class="type-row">
+          <div class="type-meta">Display / Outfit 800</div>
+          <div class="type-sample" style="font-family:'Outfit',sans-serif;font-weight:800;font-size:56px;letter-spacing:-0.03em;color:white;line-height:1;">Who's Up Next?</div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta">Heading / Outfit 600</div>
+          <div class="type-sample" style="font-family:'Outfit',sans-serif;font-weight:600;font-size:32px;letter-spacing:-0.02em;color:white;">Manage your shop. Effortlessly.</div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta">Subheading / Outfit 400</div>
+          <div class="type-sample" style="font-family:'Outfit',sans-serif;font-weight:400;font-size:20px;color:var(--gg);">No more chaos. Just clean queues.</div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta">Body / DM Sans 400</div>
+          <div class="type-sample" style="font-family:'DM Sans',sans-serif;font-weight:400;font-size:15px;color:rgba(255,255,255,0.5);line-height:1.7;max-width:560px;">UpNext lets walk-in clients add themselves to the queue so you and your barbers can focus on what matters — the cut. Real-time updates, no app needed for clients.</div>
+        </div>
+        <div class="type-row">
+          <div class="type-meta">Label / DM Sans 600 · Uppercase</div>
+          <div class="type-sample" style="font-family:'DM Sans',sans-serif;font-weight:600;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--green);">Walk-in Management · Built for Barbers</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 05 USAGE RULES -->
+  <div class="kit-section">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <span class="section-title">Usage Rules</span>
+    </div>
+    <div class="rules-grid">
+      <div class="rule-card do">
+        <div class="rule-header">✓ Do</div>
+        <div class="rule-item">Use Deep Green as the primary background</div>
+        <div class="rule-item">Pair Outfit for headings with DM Sans for body</div>
+        <div class="rule-item">Use Accent Green sparingly for CTAs and key highlights</div>
+        <div class="rule-item">Use Grey-Green (#8BA898) for secondary text and "Next" wordmark</div>
+        <div class="rule-item">Maintain clear space around the logo equal to the height of the dot mark</div>
+      </div>
+      <div class="rule-card dont">
+        <div class="rule-header">✗ Don't</div>
+        <div class="rule-item">Don't place the logo on busy or low-contrast backgrounds</div>
+        <div class="rule-item">Don't stretch, rotate, or modify the logo mark</div>
+        <div class="rule-item">Don't use more than 2 brand colors in a single UI element</div>
+        <div class="rule-item">Don't use Accent Green as a background color at large scale</div>
+        <div class="rule-item">Don't separate "Up" and "Next" — they are one word mark</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

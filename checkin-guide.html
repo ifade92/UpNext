@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fademasters – How to Check In</title>
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --teal:      #00c896;
+      --teal-dim:  #00a07a;
+      --white:     #ffffff;
+      --muted:     #8a9bb0;
+      --card-bg:   #1e2230;
+      --border:    rgba(0,200,150,0.18);
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--bg);
+      color: var(--white);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    /* ── Slideshow container ── */
+    .slideshow {
+      width: 100vw; height: 100vh;
+      position: relative;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 6vw;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      pointer-events: none;
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ── Progress bar ── */
+    .progress-bar {
+      position: fixed;
+      bottom: 0; left: 0;
+      height: 5px;
+      background: var(--teal);
+      width: 0%;
+      transition: width linear;
+      z-index: 100;
+    }
+
+    /* ── Dot navigation ── */
+    .dots {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      transition: background 0.4s;
+    }
+
+    .dot.active { background: var(--teal); }
+
+    /* ── Shared layout pieces ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0,200,150,0.12);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 6px 18px;
+      font-size: clamp(13px, 1.4vw, 16px);
+      color: var(--teal);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: clamp(16px, 2.5vh, 28px);
+    }
+
+    h1 {
+      font-size: clamp(36px, 6.5vw, 88px);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      text-align: center;
+    }
+
+    h1 span { color: var(--teal); }
+
+    .sub {
+      font-size: clamp(15px, 2vw, 26px);
+      color: var(--muted);
+      text-align: center;
+      max-width: 700px;
+      line-height: 1.55;
+      margin-top: clamp(12px, 2vh, 22px);
+    }
+
+    .step-number {
+      width: clamp(52px, 6vw, 76px);
+      height: clamp(52px, 6vw, 76px);
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--teal) 0%, var(--teal-dim) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(22px, 3vw, 38px);
+      font-weight: 900;
+      color: #0f1117;
+      flex-shrink: 0;
+    }
+
+    /* ── Slide 1: Welcome ── */
+    .slide-welcome .logo-mark {
+      width: clamp(56px, 7vw, 90px);
+      height: clamp(56px, 7vw, 90px);
+      border-radius: 22%;
+      background: linear-gradient(135deg, var(--teal) 0%, #009e76 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(26px, 4vw, 52px);
+      margin-bottom: clamp(18px, 3vh, 36px);
+      box-shadow: 0 0 40px rgba(0,200,150,0.3);
+    }
+
+    .slide-welcome h1 {
+      font-size: clamp(40px, 7.5vw, 100px);
+    }
+
+    .slide-welcome .shop-name {
+      font-size: clamp(16px, 2.2vw, 30px);
+      font-weight: 700;
+      color: var(--teal);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-top: clamp(10px, 1.5vh, 18px);
+    }
+
+    /* ── Step slides ── */
+    .slide-step .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: clamp(16px, 2vw, 28px);
+      padding: clamp(28px, 4vw, 56px) clamp(32px, 5vw, 72px);
+      max-width: 820px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: clamp(14px, 2.5vh, 24px);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+    }
+
+    .slide-step .icon-wrap {
+      font-size: clamp(48px, 7vw, 90px);
+      line-height: 1;
+    }
+
+    .slide-step h2 {
+      font-size: clamp(26px, 4vw, 54px);
+      font-weight: 800;
+      text-align: center;
+      letter-spacing: -0.01em;
+      line-height: 1.1;
+    }
+
+    .slide-step h2 span { color: var(--teal); }
+
+    .slide-step .desc {
+      font-size: clamp(14px, 1.8vw, 22px);
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+      max-width: 620px;
+    }
+
+    /* Choice cards for step 2 */
+    .choices {
+      display: flex;
+      gap: clamp(12px, 2vw, 24px);
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+      margin-top: 4px;
+    }
+
+    .choice {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: clamp(12px, 1.5vw, 20px);
+      padding: clamp(14px, 2vw, 26px) clamp(18px, 3vw, 38px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 180px;
+      max-width: 280px;
+    }
+
+    .choice .c-icon { font-size: clamp(28px, 3.5vw, 44px); }
+
+    .choice .c-label {
+      font-size: clamp(13px, 1.6vw, 20px);
+      font-weight: 700;
+      text-align: center;
+      color: var(--white);
+    }
+
+    /* ── Slide 5: Booking fallback ── */
+    .alert-card {
+      background: rgba(255, 160, 0, 0.07);
+      border: 1.5px solid rgba(255,160,0,0.25);
+      border-radius: clamp(14px, 1.8vw, 24px);
+      padding: clamp(22px, 3vw, 44px);
+      max-width: 760px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: clamp(10px, 1.8vh, 18px);
+    }
+
+    .alert-card .a-icon { font-size: clamp(40px, 5.5vw, 72px); }
+
+    .alert-card h2 {
+      font-size: clamp(22px, 3.2vw, 44px);
+      font-weight: 800;
+      text-align: center;
+      color: #ffb830;
+    }
+
+    .alert-card .desc {
+      font-size: clamp(13px, 1.6vw, 21px);
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+      max-width: 580px;
+    }
+
+    /* ── Slide 6: Done ── */
+    .slide-done .checkmark {
+      width: clamp(80px, 10vw, 130px);
+      height: clamp(80px, 10vw, 130px);
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--teal) 0%, var(--teal-dim) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(38px, 5.5vw, 72px);
+      margin-bottom: clamp(14px, 2.5vh, 28px);
+      box-shadow: 0 0 60px rgba(0,200,150,0.35);
+    }
+  </style>
+</head>
+<body>
+
+<div class="slideshow" id="slideshow">
+
+  <!-- ── Slide 1: Welcome ── -->
+  <div class="slide slide-welcome active" id="slide-0">
+    <div class="logo-mark">✂️</div>
+    <div class="badge">✦ Fademasters Barbershop</div>
+    <h1>How to <span>Check&nbsp;In</span></h1>
+    <div class="sub">Getting checked in is quick and easy.<br>Just follow the steps on the next screens.</div>
+    <p class="shop-name">Powered by UpNext</p>
+  </div>
+
+  <!-- ── Slide 2: Step 1 – Scan QR ── -->
+  <div class="slide slide-step" id="slide-1">
+    <div class="badge">Step 1 of 4</div>
+    <div class="card">
+      <div class="step-number">1</div>
+      <div class="icon-wrap">📱</div>
+      <h2>Scan the <span>QR Code</span></h2>
+      <div class="desc">
+        Open your phone camera and point it at the QR code posted at the front desk.<br>
+        It will open the UpNext check-in page automatically.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Slide 3: Step 2 – Choose visit type ── -->
+  <div class="slide slide-step" id="slide-2">
+    <div class="badge">Step 2 of 4</div>
+    <div class="card">
+      <div class="step-number">2</div>
+      <h2>Choose Your <span>Visit Type</span></h2>
+      <div class="choices">
+        <div class="choice">
+          <div class="c-icon">📅</div>
+          <div class="c-label">I Have an Appointment</div>
+        </div>
+        <div class="choice">
+          <div class="c-icon">🚶</div>
+          <div class="c-label">I'm Walking In</div>
+        </div>
+      </div>
+      <div class="desc">Tap the option that matches your visit.</div>
+    </div>
+  </div>
+
+  <!-- ── Slide 4: Step 3 – Name & party size ── -->
+  <div class="slide slide-step" id="slide-3">
+    <div class="badge">Step 3 of 4</div>
+    <div class="card">
+      <div class="step-number">3</div>
+      <div class="icon-wrap">✍️</div>
+      <h2>Enter Your <span>Name</span> &amp; Party Size</h2>
+      <div class="desc">
+        Type in your name and how many people in your group are getting a haircut.<br>
+        This helps us keep the line moving smoothly.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Slide 5: Step 4 – No walk-ins fallback ── -->
+  <div class="slide slide-step" id="slide-4">
+    <div class="badge">Step 4 of 4</div>
+    <div class="alert-card">
+      <div class="a-icon">🔔</div>
+      <h2>No Walk-ins Available?</h2>
+      <div class="desc">
+        If all barbers are currently full, you'll see the option to<br>
+        <strong style="color:#fff;">select a specific barber and book online.</strong><br><br>
+        Pick who you want, choose a time that works, and you're locked in!
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Slide 6: Done ── -->
+  <div class="slide slide-done" id="slide-5">
+    <div class="checkmark">✓</div>
+    <div class="badge">✦ You're all set!</div>
+    <h1>Sit Back &amp;<br><span>Relax</span></h1>
+    <div class="sub">
+      Take a seat and keep an eye on your phone.<br>
+      We'll notify you when your barber is ready for you.
+    </div>
+  </div>
+
+</div>
+
+<!-- Progress bar -->
+<div class="progress-bar" id="progress"></div>
+
+<!-- Dot indicators -->
+<div class="dots" id="dots"></div>
+
+<script>
+  const slides     = document.querySelectorAll('.slide');
+  const progressEl = document.getElementById('progress');
+  const dotsEl     = document.getElementById('dots');
+  const DURATION   = 6000; // ms per slide
+
+  let current    = 0;
+  let startTime  = null;
+  let rafId      = null;
+
+  // Build dots
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    dotsEl.appendChild(d);
+  });
+
+  const dotEls = document.querySelectorAll('.dot');
+
+  function goTo(index) {
+    slides[current].classList.remove('active');
+    dotEls[current].classList.remove('active');
+
+    current = index % slides.length;
+
+    slides[current].classList.add('active');
+    dotEls[current].classList.add('active');
+
+    // Reset progress bar
+    progressEl.style.transition = 'none';
+    progressEl.style.width = '0%';
+
+    // Force reflow so transition reset takes effect
+    progressEl.getBoundingClientRect();
+
+    progressEl.style.transition = `width ${DURATION}ms linear`;
+    progressEl.style.width = '100%';
+
+    startTime = performance.now();
+  }
+
+  function tick(timestamp) {
+    if (!startTime) startTime = timestamp;
+    const elapsed = timestamp - startTime;
+
+    if (elapsed >= DURATION) {
+      goTo(current + 1);
+    }
+
+    rafId = requestAnimationFrame(tick);
+  }
+
+  // Kick things off
+  goTo(0);
+  rafId = requestAnimationFrame(tick);
+</script>
+</body>
+</html>

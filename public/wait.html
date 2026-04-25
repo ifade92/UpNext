@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Wait Time – UpNext</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0D0D0D;
+      --card:    #1E1E1E;
+      --card-2:  #252525;
+      --border:  rgba(255,255,255,0.08);
+      --text:    #F0F0F0;
+      --text-2:  #9A9A9A;
+      --text-3:  #555;
+      --accent:  #2ECC71;
+      --gold:    #F4C542;
+      --red:     #E74C3C;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 16px 48px;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0 0;
+      margin-bottom: 28px;
+    }
+
+    .logo { display: flex; align-items: center; gap: 8px; }
+    .logo-shapes { display: flex; flex-direction: column; gap: 3px; }
+    .logo-dot       { width: 8px;  height: 8px;  background: var(--accent); border-radius: 2px; }
+    .logo-bar-wide  { width: 20px; height: 4px;  background: var(--accent); border-radius: 2px; }
+    .logo-bar-short { width: 13px; height: 4px;  background: var(--accent); opacity: 0.5; border-radius: 2px; }
+    .logo-text { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+
+    .live-badge {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 12px; font-weight: 600; color: var(--text-2);
+    }
+    .live-dot {
+      width: 7px; height: 7px; background: var(--accent);
+      border-radius: 50%; animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+    /* ── Content ── */
+    .content {
+      width: 100%; max-width: 420px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+
+    /* Shop name card */
+    .shop-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 20px; padding: 20px; text-align: center;
+    }
+    .shop-name  { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .shop-sub   { font-size: 13px; color: var(--text-2); }
+
+    /* Big wait card */
+    .wait-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 20px; padding: 28px 20px; text-align: center;
+    }
+    .wait-label {
+      font-size: 13px; font-weight: 600; color: var(--text-2);
+      text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px;
+    }
+    .wait-time {
+      font-size: 64px; font-weight: 900; color: var(--accent);
+      line-height: 1; letter-spacing: -2px; margin-bottom: 4px;
+    }
+    .wait-unit { font-size: 16px; font-weight: 600; color: var(--text-2); }
+
+    /* Stat row */
+    .stat-row { display: flex; gap: 12px; }
+    .stat-card {
+      flex: 1; background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 18px 12px; text-align: center;
+    }
+    .stat-value { font-size: 30px; font-weight: 800; letter-spacing: -1px; margin-bottom: 4px; }
+    .stat-value.green { color: var(--accent); }
+    .stat-label { font-size: 12px; color: var(--text-2); font-weight: 500; }
+
+    /* CTA button */
+    .cta-btn {
+      display: block; width: 100%;
+      background: var(--accent); color: #0D0D0D;
+      font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800;
+      border: none; border-radius: 16px; padding: 18px;
+      cursor: pointer; text-align: center; text-decoration: none;
+      letter-spacing: -0.3px;
+    }
+    .cta-btn:active { opacity: 0.85; }
+
+    /* ── Closed screen ── */
+    #closed-screen {
+      width: 100%; max-width: 420px;
+      display: none; flex-direction: column; gap: 16px;
+    }
+
+    .closed-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 20px; padding: 24px 20px; text-align: center;
+    }
+    .closed-emoji  { font-size: 40px; margin-bottom: 12px; }
+    .closed-title  { font-size: 18px; font-weight: 800; margin-bottom: 8px; line-height: 1.3; }
+    .closed-sub    { font-size: 14px; color: var(--text-2); line-height: 1.5; }
+
+    /* Barber booking list */
+    .section-label {
+      font-size: 11px; font-weight: 700; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 1px;
+      padding: 0 4px;
+    }
+
+    .barber-row {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 14px 16px;
+      display: flex; align-items: center; gap: 14px;
+    }
+
+    .barber-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      object-fit: cover; flex-shrink: 0;
+      background: var(--card-2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700; color: var(--accent);
+      overflow: hidden;
+    }
+
+    .barber-avatar img {
+      width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+    }
+
+    .barber-info { flex: 1; min-width: 0; }
+    .barber-name { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+    .barber-meta { font-size: 12px; color: var(--text-2); }
+
+    .book-btn {
+      background: var(--accent); color: #0D0D0D;
+      font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
+      border: none; border-radius: 10px; padding: 8px 14px;
+      cursor: pointer; text-decoration: none; white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 24px; font-size: 12px; color: var(--text-3); text-align: center;
+    }
+
+    /* Error */
+    .error-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 60vh; text-align: center; gap: 12px;
+    }
+    .error-wrap .icon { font-size: 48px; }
+    .error-wrap h2 { font-size: 20px; font-weight: 700; }
+    .error-wrap p  { font-size: 14px; color: var(--text-2); }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-shapes">
+        <div class="logo-dot"></div>
+        <div class="logo-bar-wide"></div>
+        <div class="logo-bar-short"></div>
+      </div>
+      <span class="logo-text">Up<span style="color:#8BA898;">Next</span></span>
+    </div>
+    <div class="live-badge"><div class="live-dot"></div>Live</div>
+  </div>
+
+  <!-- ── Open: walk-ins available ── -->
+  <div class="content" id="open-screen" style="display:none;">
+    <div class="shop-card">
+      <div class="shop-name" id="shop-name-open">Loading…</div>
+      <div class="shop-sub">Walk-ins welcome · No appointment needed</div>
+    </div>
+
+    <div class="wait-card">
+      <div class="wait-label">Estimated Wait</div>
+      <div class="wait-time" id="wait-time">—</div>
+      <div class="wait-unit" id="wait-unit">minutes</div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-waiting">0</div>
+        <div class="stat-label">People Waiting</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value green" id="stat-barbers">0</div>
+        <div class="stat-label">Barbers Live</div>
+      </div>
+    </div>
+
+    <a class="cta-btn" id="checkin-btn" href="#">Check In Now →</a>
+  </div>
+
+  <!-- ── Closed: no barbers taking walk-ins ── -->
+  <div id="closed-screen">
+    <div class="closed-card">
+      <div class="closed-emoji">💈</div>
+      <div class="closed-title" id="closed-shop-name">Sorry, no barbers are taking walk-ins right now.</div>
+      <div class="closed-sub">
+        But you're more than welcome to book online with anyone from our team!
+      </div>
+    </div>
+
+    <div class="section-label">Book with a barber</div>
+    <div id="barber-booking-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-wrap" id="error-wrap" style="display:none;">
+    <div class="icon">🔍</div>
+    <h2>Shop not found</h2>
+    <p id="error-detail">No shop ID was provided in the URL.</p>
+  </div>
+
+  <div class="footer" id="footer" style="display:none;">
+    Updates automatically · Powered by UpNext
+  </div>
+
+<script type="module">
+  import { initializeApp }                        from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+  import { getFirestore, doc, getDoc, collection,
+           query, where, onSnapshot }             from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+
+  // ── Security: escape user-supplied strings before injecting into innerHTML ──
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function sanitizeUrl(url) {
+    if (!url) return '#';
+    const trimmed = url.trim();
+    if (trimmed.startsWith('https://') || trimmed.startsWith('http://')) return escapeHtml(trimmed);
+    return '#';
+  }
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyAcCSUMXGSndEb9LmRBysTe-Rnbj6Z7O7Q",
+    authDomain:        "upnext-4ec7a.firebaseapp.com",
+    projectId:         "upnext-4ec7a",
+    storageBucket:     "upnext-4ec7a.firebasestorage.app",
+    messagingSenderId: "828337578393",
+    appId:             "1:828337578393:web:41ffba3eae692c9d807308"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // Default cut duration in minutes — used when no estimatedWaitMinutes is set
+  const DEFAULT_MINS_PER_CUT = 45;
+
+  const shopId = new URLSearchParams(window.location.search).get('shop');
+
+  function showError(msg) {
+    document.getElementById('error-wrap').style.display = 'flex';
+    document.getElementById('error-detail').textContent = msg;
+  }
+
+  if (!shopId) {
+    showError('No shop ID was provided in the URL.');
+  } else {
+    init(shopId);
+  }
+
+  async function init(shopId) {
+    // Load shop name
+    const shopSnap = await getDoc(doc(db, 'shops', shopId));
+    if (!shopSnap.exists()) { showError(`No shop found for "${shopId}".`); return; }
+
+    const shopName = shopSnap.data().name ?? 'the shop';
+    document.getElementById('shop-name-open').textContent = shopName;
+    document.getElementById('closed-shop-name').textContent =
+      `Sorry, there's currently no barbers taking walk-ins at ${shopName}.`;
+    document.title = `${shopName} – Live Wait`;
+
+    document.getElementById('checkin-btn').href = `/checkin?shop=${shopId}`;
+    document.getElementById('footer').style.display = 'block';
+
+    // Track live state
+    let liveBarbers  = 0;
+    let allBarbers   = [];
+    let waitingCount = 0;
+    let inChairCount = 0;
+
+    // ── Barbers listener ──────────────────────────────────────────────────
+    onSnapshot(collection(db, 'shops', shopId, 'barbers'), snap => {
+      allBarbers  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      liveBarbers = allBarbers.filter(b => b.goLive === true).length;
+      render();
+    });
+
+    // ── Queue listener: waiting + in_chair entries ────────────────────────
+    // We need both statuses to calculate the full wait time accurately.
+    // "in_chair" clients still have time remaining before the next person sits down.
+    const activeQ = query(
+      collection(db, 'shops', shopId, 'queue'),
+      where('status', 'in', ['waiting', 'in_chair'])
+    );
+
+    onSnapshot(activeQ, snap => {
+      waitingCount = snap.docs.filter(d => d.data().status === 'waiting').length;
+      inChairCount = snap.docs.filter(d => d.data().status === 'in_chair').length;
+      render();
+    });
+
+    // ── Render ─────────────────────────────────────────────────────────────
+    function render() {
+      if (liveBarbers === 0) {
+        // No barbers live → show booking screen
+        document.getElementById('open-screen').style.display   = 'none';
+        document.getElementById('closed-screen').style.display = 'flex';
+        renderBookingList();
+        return;
+      }
+
+      // Barbers are live → show wait time screen
+      document.getElementById('closed-screen').style.display = 'none';
+      document.getElementById('open-screen').style.display   = 'flex';
+
+      document.getElementById('stat-waiting').textContent = waitingCount;
+      document.getElementById('stat-barbers').textContent = liveBarbers;
+
+      // Wait time = (people in chair + people waiting) × 45 min ÷ live barbers
+      // In-chair clients each represent a full cut still underway for the next person's perspective.
+      const totalPeople = inChairCount + waitingCount;
+      const estWait     = totalPeople === 0
+        ? 0
+        : Math.round((totalPeople * DEFAULT_MINS_PER_CUT) / liveBarbers);
+
+      const waitEl = document.getElementById('wait-time');
+      const unitEl = document.getElementById('wait-unit');
+
+      if (estWait === 0) {
+        waitEl.textContent     = '0';
+        unitEl.textContent     = 'min — walk right in! 🎉';
+        waitEl.style.color     = 'var(--accent)';
+      } else {
+        const hrs  = Math.floor(estWait / 60);
+        const mins = estWait % 60;
+
+        // Format nicely: show "1 hr 15 min" if over an hour, otherwise "35 min"
+        if (hrs > 0) {
+          waitEl.textContent = `${hrs}h ${mins > 0 ? mins + 'm' : ''}`.trim();
+          unitEl.textContent = 'estimated wait';
+        } else {
+          waitEl.textContent = estWait;
+          unitEl.textContent = 'minutes';
+        }
+
+        // Color-code: green < 20 min, gold 20–50, red 50+
+        waitEl.style.color = estWait < 20 ? 'var(--accent)'
+                           : estWait < 50 ? 'var(--gold)'
+                           : 'var(--red)';
+      }
+    }
+
+    // ── Booking list (shown when closed) ──────────────────────────────────
+    function renderBookingList() {
+      const list = document.getElementById('barber-booking-list');
+      // Only show barbers who have a booking URL set
+      const bookable = allBarbers.filter(b => b.bookingUrl);
+
+      if (bookable.length === 0) {
+        list.innerHTML = `<div style="color:var(--text-2);font-size:14px;text-align:center;padding:12px 0;">
+          No online booking links set up yet — give us a call!
+        </div>`;
+        return;
+      }
+
+      list.innerHTML = bookable.map(b => {
+        const initial = escapeHtml((b.name ?? '?').charAt(0).toUpperCase());
+        const avatar  = b.photoUrl
+          ? `<div class="barber-avatar"><img src="${escapeHtml(b.photoUrl)}" alt="${escapeHtml(b.name)}" /></div>`
+          : `<div class="barber-avatar">${initial}</div>`;
+
+        return `
+          <div class="barber-row">
+            ${avatar}
+            <div class="barber-info">
+              <div class="barber-name">${escapeHtml(b.name ?? 'Barber')}</div>
+              <div class="barber-meta">Book online</div>
+            </div>
+            <a class="book-btn" href="${sanitizeUrl(b.bookingUrl)}" target="_blank" rel="noopener">Book →</a>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+</script>
+
+</body>
+</html>

@@ -23,9 +23,6 @@ class ShopSettingsViewModel: ObservableObject {
     @Published var services: [Service] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
-    // Flips to true after a password reset email is sent — used to show confirmation in the UI
-    @Published var resetPasswordSent = false
-
     // Controls whether the "Add Barber" sheet is showing
     @Published var showAddBarber = false
     // Controls whether the "Add Service" sheet is showing
@@ -101,12 +98,15 @@ class ShopSettingsViewModel: ObservableObject {
     // MARK: - Barber Actions
 
     /// Add a brand-new barber. Called when owner submits the "Add Barber" sheet.
+    /// The email is the barber's Firebase Auth identifier — it must match exactly
+    /// what they type at login, so we store it lowercased/trimmed from the view.
     func addBarber(name: String, email: String, barberType: BarberType) {
         Task {
             do {
                 let newBarber = Barber(
                     name: name,
                     photoUrl: nil,
+                    phone: nil,
                     email: email.isEmpty ? nil : email,
                     bookingUrl: nil,
                     status: .available,
@@ -126,6 +126,9 @@ class ShopSettingsViewModel: ObservableObject {
     }
 
     /// Save edits to an existing barber. Called from the edit sheet.
+    /// Fire-and-forget version — errors land in `errorMessage`. Prefer
+    /// `updateBarber(_:)` from views that need to await the result so they
+    /// can keep the sheet open and surface errors inline.
     func saveBarber(_ barber: Barber) {
         Task {
             do {
@@ -135,6 +138,14 @@ class ShopSettingsViewModel: ObservableObject {
                 self.errorMessage = error.localizedDescription
             }
         }
+    }
+
+    /// Awaitable variant of `saveBarber` — throws so the caller can show
+    /// an error and decide whether to dismiss the sheet. Used by EditBarberSheet
+    /// so save failures (bad ID, rules denial, network) don't get swallowed
+    /// after the sheet closes.
+    func updateBarber(_ barber: Barber) async throws {
+        try await firebase.updateBarber(shopId: shopId, barber: barber)
     }
 
     /// Delete a barber. Confirms via the UI before calling this.
@@ -224,6 +235,20 @@ class ShopSettingsViewModel: ObservableObject {
         }
     }
 
+    /// Toggle a barber's goLive status — owner can flip any barber online/offline from settings.
+    func toggleBarberLive(_ barber: Barber) {
+        guard let id = barber.id else { return }
+        let newValue = !barber.goLive
+        Task {
+            do {
+                try await firebase.setGoLive(shopId: shopId, barberId: id, goLive: newValue)
+                // Real-time listener will reflect the change automatically
+            } catch {
+                self.errorMessage = error.localizedDescription
+            }
+        }
+    }
+
     /// Toggle a service's active state (shows/hides it on the kiosk).
     func toggleServiceActive(_ service: Service) {
         var updated = service
@@ -297,23 +322,17 @@ class ShopSettingsViewModel: ObservableObject {
 
     // MARK: - Account Actions
 
-    /// Send a password reset email to the currently logged-in owner.
-    /// Firebase sends the link to whatever email is on the Auth account.
-    func resetPassword() {
-        guard let email = Auth.auth().currentUser?.email else {
-            errorMessage = "No email address found for your account."
-            return
-        }
-        Task {
-            do {
-                try await Auth.auth().sendPasswordReset(withEmail: email)
-                // Let the view know the email went out so it can show a confirmation
-                resetPasswordSent = true
-            } catch {
-                errorMessage = "Couldn't send reset email. Try again."
-            }
-        }
+    /// Update the booking URL on a specific barber's Firestore document.
+    /// Called from Account Settings so the logged-in user can set their own link.
+    func saveBookingLink(barberId: String, url: String) {
+        guard let barber = barbers.first(where: { $0.id == barberId }) else { return }
+        var updated = barber
+        updated.bookingUrl = url.trimmingCharacters(in: .whitespaces).isEmpty ? nil : url.trimmingCharacters(in: .whitespaces)
+        saveBarber(updated)
     }
+
+    // NOTE: resetPassword() was removed — phone auth has no password to reset.
+    // Sign-in is handled entirely via SMS verification code.
 
     // MARK: - Helpers
 

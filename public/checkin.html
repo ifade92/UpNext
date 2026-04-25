@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0D2B1A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Check In — UpNext</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- QRCode.js not needed on web check-in — booking uses direct links. QR codes are kiosk-only. -->
+  <!-- Lucide Icons — replaces all emoji throughout the app -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* Icon baseline alignment */
+    .ico { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+    .ico svg { display: block; }
+
+    :root {
+      --bg:             #061410;
+      --accent:         #2ECC71;
+      --accent-dark:    #1BA355;
+      --surface:        #1A1A1A;
+      --surface-2:      #222222;
+      --input-bg:       #1A1A1A;
+      --text:           #FFFFFF;
+      --text-secondary: rgba(255,255,255,0.6);
+      --text-muted:     rgba(255,255,255,0.35);
+      --border:         rgba(255,255,255,0.08);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Screens ── */
+    .screen {
+      display: none;
+      min-height: 100vh;
+      padding: 20px 20px 40px;
+      flex-direction: column;
+      animation: fadeIn 0.25s ease;
+    }
+    .screen.active { display: flex; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Logo ── */
+    .logo-mark { display: flex; align-items: center; gap: 8px; }
+    .logo-shapes { display: flex; flex-direction: column; gap: 4.5px; }
+    .logo-dot       { width: 7px;  height: 7px;  background: #2A4A35; border-radius: 50%; }
+    .logo-bar-wide  { width: 22px; height: 7px;  background: #2ECC71; border-radius: 2px; }
+    .logo-bar-short { width: 14px; height: 7px;  background: #2A4A35; border-radius: 2px; }
+    .logo-text { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.4px; }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      width: 100%;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 16px;
+      padding: 18px;
+      font-size: 17px;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-primary:active   { background: var(--accent-dark); transform: scale(0.98); }
+    .btn-primary:disabled { background: rgba(46,204,113,0.25); color: rgba(0,0,0,0.4); cursor: not-allowed; transform: none; }
+
+    /* ── Group size picker ── */
+    .group-size-btn {
+      flex: 1; padding: 14px 8px;
+      background: var(--card); border: 1.5px solid var(--border);
+      border-radius: 12px; color: var(--text-secondary);
+      font-size: 18px; font-weight: 700; font-family: 'Outfit', sans-serif;
+      cursor: pointer; transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .group-size-btn.active {
+      background: var(--accent-dim); border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-back {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 16px;
+      font-weight: 500;
+      font-family: 'Outfit', sans-serif;
+      cursor: pointer;
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── Screen headers ── */
+    .screen-header { padding-top: max(16px, env(safe-area-inset-top)); margin-bottom: 24px; }
+    .screen-title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+      color: var(--text);
+      margin-top: 20px;
+      margin-bottom: 6px;
+      line-height: 1.15;
+    }
+    .screen-subtitle { font-size: 15px; color: var(--text-secondary); }
+
+    /* ── Progress dots ── */
+    .progress-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 28px; }
+    .progress-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transition: background 0.2s, width 0.2s;
+    }
+    .progress-dot.active { background: var(--accent); width: 20px; border-radius: 3px; }
+
+    /* ── Inputs ── */
+    .input-group { margin-bottom: 16px; }
+    .input-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      display: block;
+    }
+    .input-field {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 17px;
+      font-weight: 500;
+      font-family: 'Outfit', sans-serif;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    .input-field:focus       { border-color: var(--accent); }
+    .input-field::placeholder { color: var(--text-muted); }
+
+    /* ── Sticky bottom ── */
+    .scroll-area   { flex: 1; overflow-y: auto; }
+    .sticky-bottom {
+      position: sticky;
+      bottom: 0;
+      background: var(--bg);
+      padding: 16px 0 max(24px, env(safe-area-inset-bottom));
+    }
+
+    /* ── Welcome ── */
+    .welcome-header { padding-top: max(20px, env(safe-area-inset-top)); margin-bottom: 8px; }
+    .welcome-hero   { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 32px 0 24px; }
+    .welcome-eyebrow {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+    .welcome-title {
+      font-size: 46px;
+      font-weight: 900;
+      line-height: 1.0;
+      letter-spacing: -1.5px;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .welcome-subtitle {
+      font-size: 17px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 28px;
+    }
+    .welcome-subtitle strong { color: var(--text); font-weight: 700; }
+    .welcome-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 48px; }
+    .stat-pill {
+      background: rgba(46,204,113,0.10);
+      border: 1px solid rgba(46,204,113,0.20);
+      border-radius: 100px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    /* ── Barber cards ── */
+    .barbers-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    /* ── Default "Next Available" row card ── */
+    .next-avail-default-card {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface-2); border: 2px solid transparent;
+      border-radius: 16px; padding: 16px;
+      cursor: pointer; transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .next-avail-default-card.selected {
+      border-color: var(--accent); background: rgba(46,204,113,0.08);
+    }
+
+    .barber-card {
+      background: var(--surface-2);
+      border: 2px solid transparent;
+      border-radius: 16px;
+      padding: 16px 12px;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .barber-card.selected { border-color: var(--accent); background: rgba(46,204,113,0.08); }
+    .barber-avatar {
+      width: 58px; height: 58px;
+      border-radius: 50%;
+      background: rgba(46,204,113,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 700; color: var(--accent);
+      margin: 0 auto 10px;
+      overflow: hidden;
+    }
+    .barber-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .barber-name  { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .barber-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(46,204,113,0.12);
+      border-radius: 100px;
+      padding: 3px 9px;
+      font-size: 11px; font-weight: 600; color: var(--accent);
+    }
+    .no-barbers {
+      text-align: center; padding: 48px 24px; color: var(--text-secondary);
+    }
+
+    /* ── Section divider ── */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 28px 0 20px;
+    }
+    .section-divider-line {
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+    }
+    .section-divider-text {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* ── Book-only barber row ── */
+    .book-only-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .book-only-avatar {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700; color: var(--text-muted);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .book-only-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .book-only-info { flex: 1; }
+    .book-only-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .book-only-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .btn-book-now {
+      display: inline-block;
+      padding: 9px 16px;
+      background: transparent;
+      border: 1.5px solid var(--accent);
+      color: var(--accent);
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px; font-weight: 700;
+      border-radius: 10px;
+      text-decoration: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .btn-book-now:active { background: rgba(46,204,113,0.1); }
+
+    /* ── Service cards ── */
+    .services-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+    .service-card {
+      background: var(--surface-2);
+      border: 2px solid transparent;
+      border-radius: 14px;
+      padding: 16px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .service-card.selected { border-color: var(--accent); background: rgba(46,204,113,0.08); }
+    .service-name     { font-size: 16px; font-weight: 600; color: var(--text); }
+    .service-duration { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+    .service-price    { font-size: 17px; font-weight: 700; color: var(--accent); }
+    .service-check    { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); display: none; align-items: center; justify-content: center; }
+    .service-card.selected .service-check { display: flex; }
+    .service-card.selected .service-price { display: none; }
+
+    /* ── Confirmation ── */
+    .confirmation-hero {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 20px 0;
+    }
+    .check-circle {
+      width: 84px; height: 84px; border-radius: 50%;
+      background: rgba(46,204,113,0.15);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+      font-size: 38px;
+    }
+    .confirmation-title {
+      font-size: 30px; font-weight: 800;
+      letter-spacing: -0.8px; line-height: 1.2;
+      color: var(--text); margin-bottom: 8px;
+    }
+    .confirmation-title .name-accent { color: var(--accent); }
+    .confirmation-subtitle { font-size: 15px; color: var(--text-secondary); margin-bottom: 28px; }
+    .position-card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    .position-row { display: flex; justify-content: space-around; margin-bottom: 20px; }
+    .position-item { text-align: center; }
+    .position-value { font-size: 38px; font-weight: 900; color: var(--accent); line-height: 1; }
+    .position-label {
+      font-size: 11px; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;
+    }
+    .divider { height: 1px; background: rgba(255,255,255,0.07); margin-bottom: 18px; }
+    .detail-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .detail-label { font-size: 14px; color: var(--text-secondary); }
+    .detail-value { font-size: 14px; font-weight: 600; color: var(--text); }
+    .sms-note { font-size: 13px; color: var(--text-secondary); line-height: 1.5; padding: 0 8px; }
+
+    /* ── Appointment check screen ── */
+    .appt-check-hero {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 32px 0 16px;
+    }
+    .appt-check-title {
+      font-size: 36px; font-weight: 900;
+      letter-spacing: -1px; line-height: 1.1;
+      color: var(--text); margin-bottom: 12px;
+    }
+    .appt-check-subtitle {
+      font-size: 15px; color: var(--text-secondary);
+      line-height: 1.5; margin-bottom: 40px;
+    }
+    .appt-check-buttons { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+    .btn-secondary {
+      width: 100%;
+      background: var(--surface);
+      color: var(--text);
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 18px;
+      font-size: 17px;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-secondary:active { background: var(--surface-2); transform: scale(0.98); }
+
+    /* ── Find-barber screen (appointment path) ── */
+    .find-barber-header {
+      padding-top: max(16px, env(safe-area-inset-top));
+      margin-bottom: 4px;
+    }
+    .find-barber-label {
+      font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 2px;
+      color: var(--accent); margin-bottom: 8px;
+    }
+    .find-barber-title {
+      font-size: 28px; font-weight: 900;
+      letter-spacing: -0.8px; color: var(--text);
+      margin-bottom: 6px; line-height: 1.2;
+    }
+    .find-barber-subtitle {
+      font-size: 14px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px;
+    }
+    /* Selected state for appointment barber cards */
+    .find-barber-card.selected {
+      border-color: var(--accent);
+      background: rgba(46,204,113,0.08);
+    }
+    .find-barber-card { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: border-color 0.15s, background 0.15s; }
+
+    /* Appointment name overlay sheet */
+    .appt-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 100;
+      display: none;
+      align-items: flex-end;
+    }
+    .appt-overlay.open { display: flex; }
+    .appt-overlay-sheet {
+      background: var(--surface);
+      border-radius: 24px 24px 0 0;
+      padding: 28px 24px;
+      padding-bottom: max(32px, env(safe-area-inset-bottom));
+      width: 100%;
+    }
+    .appt-overlay-title {
+      font-size: 22px; font-weight: 800;
+      letter-spacing: -0.5px; margin-bottom: 4px;
+    }
+    .appt-overlay-subtitle {
+      font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;
+    }
+
+    /* Reuses .barbers-grid and .barber-card — just larger avatars for ID purposes */
+    .find-barber-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .find-barber-card {
+      background: var(--surface-2);
+      border: 1.5px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 14px 8px;
+      text-align: center;
+    }
+    .find-barber-avatar {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: rgba(46,204,113,0.10);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; font-weight: 700; color: var(--accent);
+      margin: 0 auto 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    .find-barber-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+    .find-barber-avatar .live-dot {
+      position: absolute; bottom: 2px; right: 2px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+    }
+    .find-barber-name {
+      font-size: 12px; font-weight: 700;
+      color: var(--text); line-height: 1.2;
+    }
+
+    /* ── Loading / Error ── */
+    .loading-screen, .error-screen {
+      min-height: 100vh; display: flex;
+      align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px; padding: 24px; text-align: center;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(46,204,113,0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-icon  { font-size: 48px; }
+    .error-title { font-size: 22px; font-weight: 700; }
+    .error-msg   { font-size: 15px; color: var(--text-secondary); }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════ LOADING ═══════════════════════ -->
+<div id="loading" class="loading-screen">
+  <div class="logo-mark" style="margin-bottom:8px;">
+    <div class="logo-shapes">
+      <div class="logo-dot"></div>
+      <div class="logo-bar-wide"></div>
+      <div class="logo-bar-short"></div>
+    </div>
+    <span class="logo-text">Up<span style="color:#8BA898;">Next</span></span>
+  </div>
+  <div class="spinner"></div>
+</div>
+
+<!-- ═══════════════════════ ERROR ═══════════════════════ -->
+<div id="error" style="display:none;" class="error-screen">
+  <div class="error-icon">
+    <div class="logo-mark" style="justify-content:center;">
+      <div class="logo-shapes" style="gap:5px;">
+        <div class="logo-dot" style="width:12px;height:12px;"></div>
+        <div class="logo-bar-wide" style="width:36px;height:10px;"></div>
+        <div class="logo-bar-short" style="width:22px;height:10px;"></div>
+      </div>
+      <span class="logo-text" style="font-size:26px;">Up<span style="color:#8BA898;">Next</span></span>
+    </div>
+  </div>
+  <div class="error-title">Something went wrong</div>
+  <div class="error-msg" id="error-msg">We couldn't load this shop. Please scan the QR code again.</div>
+</div>
+
+<!-- ═══════════════════════ SCREEN 0 — BOOKING (no walk-ins) ═══════════════════════ -->
+<div id="screen-booking" class="screen">
+  <div class="welcome-header">
+    <div class="logo-mark">
+      <div class="logo-shapes">
+        <div class="logo-dot"></div>
+        <div class="logo-bar-wide"></div>
+        <div class="logo-bar-short"></div>
+      </div>
+      <span class="logo-text">Up<span style="color:#8BA898;">Next</span></span>
+    </div>
+  </div>
+
+  <div class="welcome-hero">
+    <div class="welcome-eyebrow" style="color:var(--text-secondary);">No walk-ins available right now</div>
+    <div class="welcome-title" style="font-size:clamp(28px,6vw,48px);">Sorry, we're not<br>taking walk-ins<br>at the moment.</div>
+    <div class="welcome-subtitle">All barbers are currently appointment only — we apologize for the inconvenience! You can still book online with any barber below.</div>
+  </div>
+
+  <div id="booking-barbers-list" style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;"></div>
+</div>
+
+<!-- QR modal removed — booking screen uses direct Book Now links on web -->
+
+<!-- ═══════════════════════ SCREEN 1A — APPOINTMENT CHECK ═══════════════════════ -->
+<div id="screen-appointmentcheck" class="screen">
+  <div style="padding-top:max(20px,env(safe-area-inset-top));"></div>
+
+  <div class="appt-check-hero">
+    <!-- Icon -->
+    <div style="margin-bottom:20px;display:flex;justify-content:center;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div style="width:14px;height:14px;background:#2A4A35;border-radius:50%;"></div>
+          <div style="width:44px;height:11px;background:#2ECC71;border-radius:3px;"></div>
+          <div style="width:28px;height:11px;background:#2A4A35;border-radius:3px;"></div>
+        </div>
+        <span style="font-size:32px;font-weight:800;letter-spacing:-0.5px;color:var(--text);">Up<span style="color:#8BA898;">Next</span></span>
+      </div>
+    </div>
+
+    <div class="appt-check-title">Do you have an<br>appointment?</div>
+    <div class="appt-check-subtitle">Let us know so we can point you<br>in the right direction</div>
+
+    <div class="appt-check-buttons">
+      <!-- YES → show all barbers, no queue entry -->
+      <button class="btn-primary" style="display:flex;align-items:center;justify-content:center;gap:10px;"
+        onclick="goToStep('findbarber')">
+        <i data-lucide="calendar" class="ico" style="width:18px;height:18px;"></i>
+        Yes, I have an appointment
+      </button>
+
+      <!-- NO → walk-in flow: straight to name + party size, no barber/service selection -->
+      <button class="btn-secondary" onclick="goToStep('namephone')">
+        <i data-lucide="user" class="ico" style="width:18px;height:18px;"></i>
+        No, I'm a walk-in
+      </button>
+    </div>
+  </div>
+
+  <div style="padding-bottom:max(24px,env(safe-area-inset-bottom));"></div>
+</div>
+
+
+<!-- ═══════════════════════ SCREEN 1B — FIND YOUR BARBER (appointment path) ═══════════════════════ -->
+<div id="screen-findbarber" class="screen">
+  <div class="find-barber-header">
+    <button class="btn-back" onclick="goToStep('appointmentcheck')"><i data-lucide="chevron-left" class="ico" style="width:16px;height:16px;margin-right:2px;"></i>Back</button>
+    <div class="find-barber-label">Appointment Check-In</div>
+    <div class="find-barber-title">Who's your barber?</div>
+    <div class="find-barber-subtitle">
+      Tap your barber's photo to check in — they'll see you've arrived.
+    </div>
+  </div>
+
+  <div class="scroll-area">
+    <div class="find-barber-grid" id="find-barber-grid"></div>
+  </div>
+
+  <div class="sticky-bottom">
+    <button class="btn-primary" id="btn-appt-checkin" onclick="openApptCheckIn()" disabled>
+      Tap a barber above <i data-lucide="arrow-up" class="ico" style="width:15px;height:15px;margin-left:3px;"></i>
+    </button>
+    <button style="
+      width:100%;background:none;border:none;
+      color:rgba(255,255,255,0.35);font-size:14px;font-weight:500;
+      font-family:'Outfit',sans-serif;padding:12px 0 0;cursor:pointer;
+      -webkit-tap-highlight-color:transparent;
+    " onclick="goToStep('appointmentcheck')">Just looking — Done</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ APPOINTMENT NAME OVERLAY ═══════════════════════ -->
+<div id="appt-name-overlay" class="appt-overlay">
+  <div class="appt-overlay-sheet">
+    <div class="appt-overlay-title">
+      Check in with <span id="appt-overlay-barber" style="color:var(--accent);"></span>
+    </div>
+    <div class="appt-overlay-subtitle">Enter your name so your barber knows you're here</div>
+    <input id="appt-name-input" class="input-field" type="text"
+      placeholder="Your name"
+      autocomplete="name"
+      autocapitalize="words"
+      enterkeyhint="done">
+    <div style="display:flex;gap:10px;margin-top:12px;">
+      <button class="btn-secondary" style="flex:1;" onclick="closeApptOverlay()">Cancel</button>
+      <button class="btn-primary" id="btn-appt-submit" style="flex:2;" disabled
+        onclick="submitAppointmentCheckIn()">Check In <i data-lucide="arrow-right" class="ico" style="width:16px;height:16px;margin-left:4px;"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ SCREEN APPT CONFIRMATION ═══════════════════════ -->
+<div id="screen-appt-confirmation" class="screen">
+  <div style="padding-top:max(20px,env(safe-area-inset-top));"></div>
+  <div class="confirmation-hero">
+    <div class="check-circle"><i data-lucide="calendar" class="ico" style="width:36px;height:36px;"></i></div>
+    <div class="confirmation-title">
+      You're all set,<br>
+      <span class="name-accent" id="appt-confirm-name"></span>!
+    </div>
+    <div class="confirmation-subtitle">Your barber knows you've arrived</div>
+
+    <div class="position-card" style="text-align:center;">
+      <div style="font-size:13px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:10px;">Checked in with</div>
+      <div style="font-size:26px;font-weight:900;color:var(--text);margin-bottom:16px;" id="appt-confirm-barber"></div>
+      <div class="divider"></div>
+      <div style="font-size:14px;color:var(--text-secondary);line-height:1.6;padding:4px 0;">
+        Head to your barber's station — they'll come get you when they're ready. <i data-lucide="scissors" class="ico" style="width:14px;height:14px;margin-left:2px;"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ SCREEN 1 — WELCOME ═══════════════════════ -->
+<div id="screen-welcome" class="screen">
+  <div class="welcome-header">
+    <div class="logo-mark">
+      <div class="logo-shapes">
+        <div class="logo-dot"></div>
+        <div class="logo-bar-wide"></div>
+        <div class="logo-bar-short"></div>
+      </div>
+      <span class="logo-text">Up<span style="color:#8BA898;">Next</span></span>
+    </div>
+  </div>
+
+  <div class="welcome-hero">
+    <div class="welcome-eyebrow">Walk In</div>
+    <div class="welcome-title">Skip the wait,<br>not the chair.</div>
+    <div class="welcome-subtitle">
+      Sign in here to get in line at <strong id="shop-name-display">the shop</strong>
+    </div>
+    <div class="welcome-stats" id="welcome-stats"></div>
+  </div>
+
+  <div>
+    <button class="btn-primary" onclick="goToStep('appointmentcheck')">Check In <i data-lucide="arrow-right" class="ico" style="width:16px;height:16px;margin-left:4px;"></i></button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ SCREEN 2 — NAME ═══════════════════════ -->
+<div id="screen-namephone" class="screen">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goToStep('appointmentcheck')"><i data-lucide="chevron-left" class="ico" style="width:16px;height:16px;margin-right:2px;"></i>Back</button>
+    <div class="screen-title">Let's get<br>you in line.</div>
+    <div class="screen-subtitle">Just your name to hold your spot.</div>
+    <div id="walkin-stats" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"></div>
+  </div>
+
+  <div class="progress-dots">
+    <div class="progress-dot active"></div>
+    <div class="progress-dot"></div>
+    <div class="progress-dot"></div>
+  </div>
+
+  <div class="input-group">
+    <label class="input-label" for="input-name">Your Name</label>
+    <input class="input-field" id="input-name" type="text"
+      placeholder="First and last name"
+      autocomplete="name"
+      autocapitalize="words"
+      enterkeyhint="next">
+  </div>
+
+  <!-- Group size selector -->
+  <div class="input-group" style="margin-top:4px;">
+    <label class="input-label">How many people need a haircut?</label>
+    <div style="display:flex;gap:10px;">
+      <button class="group-size-btn active" id="grp-1" onclick="setGroupSize(1)">1</button>
+      <button class="group-size-btn" id="grp-2" onclick="setGroupSize(2)">2</button>
+      <button class="group-size-btn" id="grp-3" onclick="setGroupSize(3)">3</button>
+      <button class="group-size-btn" id="grp-4" onclick="setGroupSize(4)">4+</button>
+    </div>
+  </div>
+
+  <!-- Phone input hidden — SMS notifications coming soon -->
+  <input type="hidden" id="input-phone" value="">
+
+  <div style="flex:1;"></div>
+  <div class="sticky-bottom">
+    <!-- Walk-ins go straight to the pool — no barber or service selection needed -->
+    <button class="btn-primary" id="btn-namephone-next" onclick="submitWalkIn()" disabled>
+      Check In <i data-lucide="arrow-right" class="ico" style="width:16px;height:16px;margin-left:4px;"></i>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ SCREEN 3 — CHOOSE BARBER ═══════════════════════ -->
+<div id="screen-barber" class="screen">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goToStep('namephone')"><i data-lucide="chevron-left" class="ico" style="width:16px;height:16px;margin-right:2px;"></i>Back</button>
+    <div class="screen-title">Who do you<br>want?</div>
+    <div class="screen-subtitle" id="barber-screen-subtitle">We'll get you with the next available barber.</div>
+  </div>
+
+  <div class="progress-dots">
+    <div class="progress-dot"></div>
+    <div class="progress-dot active"></div>
+    <div class="progress-dot"></div>
+  </div>
+
+  <div class="scroll-area">
+
+    <!-- Default: Next Available card (pre-selected) -->
+    <div id="next-available-default" style="display:none;padding:0 4px 8px;">
+      <div id="next-avail-card" class="next-avail-default-card selected" onclick="selectNextAvailable()">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:44px;height:44px;border-radius:50%;
+            background:linear-gradient(135deg,#1BA355,#0D6E3A);
+            display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i data-lucide="zap" class="ico" style="width:22px;height:22px;color:#fff;"></i></div>
+          <div>
+            <div style="font-size:16px;font-weight:700;">Next Available</div>
+            <div style="font-size:13px;color:var(--text-secondary);margin-top:2px;" id="next-avail-wait-label">Shortest wait time</div>
+          </div>
+        </div>
+        <div id="next-avail-check" style="
+          width:24px;height:24px;border-radius:50%;
+          background:var(--accent);display:flex;align-items:center;justify-content:center;
+          font-size:13px;font-weight:700;color:#000;flex-shrink:0;"><i data-lucide="check" class="ico" style="width:14px;height:14px;"></i></div>
+      </div>
+
+      <!-- Subtle "pick someone specific" toggle -->
+      <button id="pick-specific-btn" onclick="toggleSpecificBarbers()" style="
+        width:100%;background:none;border:none;
+        color:var(--text-muted);font-size:13px;font-weight:500;
+        font-family:'Outfit',sans-serif;padding:10px 4px;cursor:pointer;
+        text-align:center;-webkit-tap-highlight-color:transparent;
+      ">Choose a specific barber <i data-lucide="chevron-down" class="ico" style="width:14px;height:14px;margin-left:2px;"></i></button>
+    </div>
+
+    <!-- Specific barber grid (hidden by default when Next Available exists) -->
+    <div id="specific-barbers-section" style="display:none;">
+      <div class="barbers-grid" id="barbers-grid"></div>
+    </div>
+
+    <!-- Fallback: show grid directly if only 1 barber is live -->
+    <div id="single-barber-section" style="display:none;">
+      <div class="barbers-grid" id="barbers-grid-single"></div>
+    </div>
+
+    <div id="no-barbers" class="no-barbers" style="display:none;">
+      <div style="margin-bottom:14px;display:flex;justify-content:center;"><i data-lucide="scissors" class="ico" style="width:36px;height:36px;opacity:0.3;"></i></div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px;">No barbers live right now</div>
+      <div style="font-size:14px;">Check back in a little while!</div>
+    </div>
+
+    <!-- Book-only barbers (not taking walk-ins) -->
+    <div id="book-only-section" style="display:none;">
+      <div class="section-divider">
+        <div class="section-divider-line"></div>
+        <span class="section-divider-text">not taking walk-ins right now</span>
+        <div class="section-divider-line"></div>
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);text-align:center;margin-bottom:16px;line-height:1.5;padding:0 8px;">
+        These barbers are only taking appointments at the moment — but you can book online with them below!
+      </div>
+      <div id="book-only-list" style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;"></div>
+    </div>
+  </div>
+
+  <div class="sticky-bottom">
+    <button class="btn-primary" id="btn-barber-next" onclick="goToStep('service')" disabled>
+      Next <i data-lucide="arrow-right" class="ico" style="width:16px;height:16px;margin-left:4px;"></i>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ SCREEN 4 — CHOOSE SERVICE ═══════════════════════ -->
+<div id="screen-service" class="screen">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goToStep('barber')"><i data-lucide="chevron-left" class="ico" style="width:16px;height:16px;margin-right:2px;"></i>Back</button>
+    <div class="screen-title">What are<br>you getting?</div>
+  </div>
+
+  <div class="progress-dots">
+    <div class="progress-dot"></div>
+    <div class="progress-dot"></div>
+    <div class="progress-dot active"></div>
+  </div>
+
+  <div class="scroll-area">
+    <div class="services-list" id="services-list"></div>
+  </div>
+
+  <div class="sticky-bottom">
+    <button class="btn-primary" id="btn-service-next" onclick="submitCheckIn()" disabled>
+      Check In <i data-lucide="arrow-right" class="ico" style="width:16px;height:16px;margin-left:4px;"></i>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ SCREEN 5 — CONFIRMATION ═══════════════════════ -->
+<div id="screen-confirmation" class="screen">
+  <div style="padding-top:max(20px,env(safe-area-inset-top));"></div>
+  <div class="confirmation-hero">
+    <div class="check-circle"><i data-lucide="check-circle" class="ico" style="width:36px;height:36px;"></i></div>
+    <div class="confirmation-title">
+      You're checked in,<br>
+      <span class="name-accent" id="confirm-name"></span>!
+    </div>
+    <div class="confirmation-subtitle">Your spot is saved — you're in line!</div>
+
+    <div class="position-card">
+      <div class="position-row">
+        <div class="position-item">
+          <div class="position-value" id="confirm-position">—</div>
+          <div class="position-label">In Line</div>
+        </div>
+        <div style="width:1px;background:rgba(255,255,255,0.08);"></div>
+        <div class="position-item">
+          <div class="position-value" id="confirm-wait">—</div>
+          <div class="position-label">Min Wait</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="detail-row">
+        <span class="detail-label">Barber</span>
+        <span class="detail-value" id="confirm-barber"><i data-lucide="zap" class="ico" style="width:13px;height:13px;margin-right:4px;"></i>Next Available</span>
+      </div>
+      <div class="detail-row" id="confirm-party-row" style="display:none;">
+        <span class="detail-label">Party Size</span>
+        <span class="detail-value" id="confirm-party">—</span>
+      </div>
+    </div>
+
+    <div class="sms-note">
+      <i data-lucide="scissors" class="ico" style="width:14px;height:14px;margin-right:5px;"></i>Head over when you're ready — the next available barber will call your name.
+    </div>
+
+    <!-- Track my spot button — link populated after check-in -->
+    <div style="padding:0 24px 16px;width:100%;">
+      <a id="track-spot-btn" href="#" style="
+        display:block; width:100%; text-align:center;
+        background:var(--accent-dim); border:1.5px solid rgba(46,204,113,0.3);
+        border-radius:14px; padding:16px;
+        color:var(--accent); font-size:15px; font-weight:700;
+        text-decoration:none; font-family:'Outfit',sans-serif;
+        -webkit-tap-highlight-color:transparent;
+        box-sizing:border-box;
+      "><i data-lucide="map-pin" class="ico" style="width:15px;height:15px;margin-right:6px;"></i>Track my spot in line</a>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ JAVASCRIPT ═══════════════════════ -->
+<script type="module">
+  import { initializeApp }    from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+  import {
+    getFirestore,
+    doc, getDoc, getDocs,
+    collection, addDoc,
+    serverTimestamp,
+    query, where
+  } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+
+  // ── Security: escape user-supplied strings before injecting into innerHTML ──
+  // Prevents XSS — any HTML/JS in customer names, barber names, URLs, etc. is
+  // rendered as harmless text instead of executable markup.
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // Validate URLs before injecting into href attributes.
+  // Only allows http:// and https:// — blocks javascript: and data: schemes.
+  function sanitizeUrl(url) {
+    if (!url) return '#';
+    const trimmed = url.trim();
+    if (trimmed.startsWith('https://') || trimmed.startsWith('http://')) return escapeHtml(trimmed);
+    return '#';
+  }
+
+  // ── Icon helper — renders a Lucide icon as inline SVG markup ─────────────────
+  function icon(name, size = 16, style = '') {
+    return `<i data-lucide="${name}" class="ico" style="width:${size}px;height:${size}px;${style}"></i>`;
+  }
+
+  // ── Firebase config ─────────────────────────────────────────────────────────
+  // NOTE: Get your Web App ID from Firebase Console → Project Settings → Your Apps
+  // If you haven't added a web app yet: Add app → Web → copy the config
+  const firebaseConfig = {
+    apiKey:            "AIzaSyAcCSUMXGSndEb9LmRBysTe-Rnbj6Z7O7Q",
+    authDomain:        "upnext-4ec7a.firebaseapp.com",
+    projectId:         "upnext-4ec7a",
+    storageBucket:     "upnext-4ec7a.firebasestorage.app",
+    messagingSenderId: "828337578393",
+    appId:             "1:828337578393:web:41ffba3eae692c9d807308"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // ── App state ────────────────────────────────────────────────────────────────
+  let shopId          = null;
+  let isFromQR        = false;   // true when customer scanned the QR code at the shop
+  let shopData        = null;
+  let barbers         = [];   // live barbers (taking walk-ins)
+  let allShopBarbers  = [];   // ALL barbers in the shop
+  let services        = [];
+  let queueEntries    = [];
+  let selectedBarber  = null;
+  let selectedService = null;
+
+  // ── Init ─────────────────────────────────────────────────────────────────────
+  async function init() {
+    const params = new URLSearchParams(window.location.search);
+    shopId   = params.get('shop');
+    isFromQR = params.get('source') === 'qr';  // QR code at the shop includes &source=qr
+
+    if (!shopId) {
+      showError('No shop found. Please scan the QR code again.');
+      return;
+    }
+
+    try {
+      // Load shop
+      const shopSnap = await getDoc(doc(db, 'shops', shopId));
+      if (!shopSnap.exists()) {
+        showError('Shop not found. Please scan the correct QR code.');
+        return;
+      }
+      shopData = { id: shopSnap.id, ...shopSnap.data() };
+
+      // Load ALL barbers in the shop
+      const barbersSnap = await getDocs(collection(db, 'shops', shopId, 'barbers'));
+      allShopBarbers = barbersSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+
+      // Live barbers — taking walk-ins right now
+      barbers = allShopBarbers
+        .filter(b => b.goLive === true && b.status !== 'off');
+
+      // Load active services
+      const servicesSnap = await getDocs(collection(db, 'shops', shopId, 'services'));
+      services = servicesSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(s => s.active !== false)
+        .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+
+      // Load current queue for wait time calculations
+      const queueSnap = await getDocs(
+        query(
+          collection(db, 'shops', shopId, 'queue'),
+          where('status', 'in', ['waiting', 'notified', 'in_chair'])
+        )
+      );
+      queueEntries = queueSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      const startScreen = renderWelcome();
+      document.getElementById('loading').style.display = 'none';
+      showScreen(startScreen);
+      lucide.createIcons();
+
+    } catch (err) {
+      console.error('Init error:', err);
+      showError('Something went wrong. Please try again.');
+    }
+  }
+
+  // ── Welcome screen ───────────────────────────────────────────────────────────
+  function renderWelcome() {
+    document.title = `Check In — ${shopData.name}`;
+    document.getElementById('shop-name-display').textContent = shopData.name;
+
+    const liveCount    = barbers.length;
+    const waitingCount = queueEntries.filter(e => e.status === 'waiting' || e.status === 'notified').length;
+
+    // Skip the welcome screen entirely — go straight to the appointment check screen.
+    // Stats (barbers live, wait count) are shown on the walk-in page instead.
+    const statsHtml = liveCount === 0
+      ? `<div class="stat-pill">${icon('scissors',13,'margin-right:5px;opacity:0.6;')} Walk-ins not available right now</div>`
+      : `
+        <div class="stat-pill">${icon('scissors',13,'margin-right:5px;')} ${liveCount} barber${liveCount !== 1 ? 's' : ''} live</div>
+        ${waitingCount > 0
+          ? `<div class="stat-pill">${icon('users',13,'margin-right:5px;')} ${waitingCount} waiting</div>`
+          : `<div class="stat-pill"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2ECC71;margin-right:6px;"></span>No wait right now</div>`
+        }
+      `;
+
+    // Populate the stats on both the old welcome screen (harmless) and the walk-in screen
+    const welcomeStats = document.getElementById('welcome-stats');
+    if (welcomeStats) welcomeStats.innerHTML = statsHtml;
+    const walkinStats = document.getElementById('walkin-stats');
+    if (walkinStats) walkinStats.innerHTML = statsHtml;
+
+    return 'appointmentcheck';
+  }
+
+  function renderBookingScreen() {
+    // Use already-loaded allShopBarbers for booking
+    const allBarbers = allShopBarbers.filter(b => b.bookingUrl);
+
+    const list = document.getElementById('booking-barbers-list');
+    if (allBarbers.length === 0) {
+      list.innerHTML = `<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:14px;padding:20px 0;">No booking links set up yet. Check back later or ask at the front desk.</div>`;
+      return;
+    }
+
+    list.innerHTML = allBarbers.map(b => `
+      <div style="
+        display:flex;align-items:center;gap:14px;
+        background:#1A1A1A;border:1px solid rgba(255,255,255,0.08);
+        border-radius:16px;padding:16px;
+      ">
+        ${b.photoUrl
+          ? `<img src="${escapeHtml(b.photoUrl)}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;object-position:top;flex-shrink:0;" />`
+          : `<div style="width:52px;height:52px;border-radius:50%;background:#222;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:rgba(255,255,255,0.5);flex-shrink:0;">${escapeHtml(b.name.charAt(0))}</div>`
+        }
+        <div style="flex:1;">
+          <div style="font-size:16px;font-weight:700;color:#fff;">${escapeHtml(b.name)}</div>
+          <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-top:2px;">Appointments only</div>
+        </div>
+        <a href="${sanitizeUrl(b.bookingUrl)}" target="_blank" rel="noopener" style="
+          display:inline-block;
+          padding:10px 18px;
+          background:#1BA355;
+          color:#fff;
+          font-family:'Outfit',sans-serif;
+          font-size:14px;font-weight:700;
+          border-radius:10px;
+          text-decoration:none;
+          white-space:nowrap;
+          flex-shrink:0;
+        ">Book Now ${icon('arrow-right',14,'margin-left:3px;')}</a>
+      </div>
+    `).join('');
+    lucide.createIcons(); // hydrate icons in newly rendered booking list
+  }
+
+  // ── Navigation ───────────────────────────────────────────────────────────────
+  window.goToStep = function(step) {
+    // Walk-in path: if no barbers are live, send them to the booking screen instead
+    if (step === 'namephone' && barbers.length === 0) {
+      renderBookingScreen();
+      showScreen('booking');
+      return;
+    }
+
+    // Reset group size back to 1 whenever the user returns to the name screen
+    if (step === 'namephone') {
+      groupSize = 1;
+      setGroupSize(1);
+      nameInput && (nameInput.value = '');
+      validateNamePhone && validateNamePhone();
+    }
+    if (step === 'findbarber') renderFindBarbers();
+    if (step === 'barber')     renderBarbers();
+    if (step === 'service') { if (!selectedBarber) return; renderServices(); }
+    showScreen(step);
+  };
+
+  // ── Find-barber screen (appointment path) ────────────────────────────────────
+  // Shows ALL barbers at the shop with photos. Client taps their barber,
+  // enters their name, and gets added to that barber's queue as an appointment.
+  function renderFindBarbers() {
+    const grid = document.getElementById('find-barber-grid');
+    if (!grid) return;
+
+    // Reset selection state each time this screen is shown
+    selectedAppointmentBarber = null;
+    const checkInBtn = document.getElementById('btn-appt-checkin');
+    if (checkInBtn) {
+      checkInBtn.disabled = true;
+      checkInBtn.innerHTML = `Tap a barber above ${icon('arrow-up',15,'margin-left:3px;')}`;
+    }
+
+    // Build a set of live barber IDs so we can show the green dot
+    const liveIds = new Set(barbers.map(b => b.id));
+
+    grid.innerHTML = allShopBarbers.map(barber => {
+      const initial  = escapeHtml((barber.name || '?').charAt(0).toUpperCase());
+      const isLive   = liveIds.has(barber.id);
+      const liveDot  = isLive ? '<div class="live-dot"></div>' : '';
+
+      const avatarInner = barber.photoUrl
+        ? `<img src="${escapeHtml(barber.photoUrl)}" alt="${escapeHtml(barber.name)}"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+           <div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;
+             font-size:24px;font-weight:700;color:var(--accent);">${initial}</div>`
+        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+             font-size:24px;font-weight:700;color:var(--accent);">${initial}</div>`;
+
+      // Each card is tappable — passes its barber ID and itself to selectApptBarber
+      return `
+        <div class="find-barber-card" onclick="selectApptBarber('${escapeHtml(barber.id)}', this)">
+          <div class="find-barber-avatar">
+            ${avatarInner}
+            ${liveDot}
+          </div>
+          <div class="find-barber-name">${escapeHtml(barber.name)}</div>
+        </div>
+      `;
+    }).join('');
+    lucide.createIcons(); // hydrate icons in newly rendered grid
+  }
+
+  // ── Appointment barber selection ──────────────────────────────────────────────
+  let selectedAppointmentBarber = null;
+
+  // Called when a barber card is tapped on the find-barber screen
+  window.selectApptBarber = function(barberId, el) {
+    const barber = allShopBarbers.find(b => b.id === barberId);
+    if (!barber) return;
+
+    selectedAppointmentBarber = barber;
+
+    // Highlight selected card, deselect others
+    document.querySelectorAll('.find-barber-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+
+    // Activate the check-in button with the barber's name
+    const btn = document.getElementById('btn-appt-checkin');
+    btn.disabled = false;
+    btn.innerHTML = `Check In with ${escapeHtml(barber.name)} ${icon('arrow-right',16,'margin-left:4px;')}`;
+  };
+
+  // Opens the name input overlay sheet
+  window.openApptCheckIn = function() {
+    if (!selectedAppointmentBarber) return;
+    document.getElementById('appt-overlay-barber').textContent = selectedAppointmentBarber.name;
+    const nameInput = document.getElementById('appt-name-input');
+    nameInput.value = '';
+    document.getElementById('btn-appt-submit').disabled = true;
+    document.getElementById('appt-name-overlay').classList.add('open');
+    setTimeout(() => nameInput.focus(), 150);
+  };
+
+  window.closeApptOverlay = function() {
+    document.getElementById('appt-name-overlay').classList.remove('open');
+  };
+
+  // Validate name as user types in overlay
+  document.getElementById('appt-name-input').addEventListener('input', function() {
+    document.getElementById('btn-appt-submit').disabled = this.value.trim().length < 2;
+  });
+
+  // Submit appointment check-in to Firestore
+  window.submitAppointmentCheckIn = async function() {
+    if (!selectedAppointmentBarber) return;
+    const name = document.getElementById('appt-name-input').value.trim();
+    if (name.length < 2) return;
+
+    const btn = document.getElementById('btn-appt-submit');
+    btn.disabled    = true;
+    btn.textContent = 'Checking in...';
+
+    try {
+      // Add to queue — isAppointment:true so the barber app can show a different indicator
+      await addDoc(collection(db, 'shops', shopId, 'queue'), {
+        customerName:     name,
+        customerPhone:    '',
+        barberId:         selectedAppointmentBarber.id,
+        status:           'waiting',
+        isAppointment:    true,       // appointment flag — barber app reads this
+        isRemoteCheckIn:  !isFromQR,  // true = remote (from website link), false = at the shop (QR scan)
+        remoteStatus:     !isFromQR ? 'on_the_way' : null,  // tracks remote arrival progress
+        checkInTime:      serverTimestamp(),
+        checkedInViaWeb:  true,
+        notifiedAlmostUp: false,
+        notifiedYoureUp:  false,
+      });
+
+      // Close overlay, show appointment confirmation
+      closeApptOverlay();
+      document.getElementById('appt-confirm-name').textContent = name.split(' ')[0];
+      document.getElementById('appt-confirm-barber').textContent = selectedAppointmentBarber.name;
+      showScreen('appt-confirmation');
+
+    } catch (err) {
+      console.error('Appointment check-in error:', err);
+      btn.disabled  = false;
+      btn.innerHTML = `Check In ${icon('arrow-right',16,'margin-left:4px;')}`;
+      const code = err && err.code ? err.code : 'unknown';
+      const msg  = err && err.message ? err.message : 'Please try again.';
+      alert(`Couldn't check in (${code}).\n\n${msg}`);
+    }
+  };
+
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name)?.classList.add('active');
+    window.scrollTo(0, 0);
+    // Hydrate any data-lucide icons that just became visible
+    lucide.createIcons();
+  }
+
+  // ── Group size ────────────────────────────────────────────────────────────────
+  let groupSize = 1;
+
+  window.setGroupSize = function(size) {
+    groupSize = size;
+    // Update button active states
+    [1, 2, 3, 4].forEach(n => {
+      document.getElementById(`grp-${n}`)?.classList.toggle('active', n === size);
+    });
+  };
+
+  // ── Name validation (phone hidden until SMS is live) ─────────────────────────
+  const nameInput  = document.getElementById('input-name');
+  const phoneInput = document.getElementById('input-phone'); // hidden input — kept for schema compat
+  const btnNext    = document.getElementById('btn-namephone-next');
+
+  function validateNamePhone() {
+    const name = nameInput.value.trim();
+    btnNext.disabled = name.length < 2;
+  }
+
+  nameInput.addEventListener('input', validateNamePhone);
+
+  // ── Barbers screen ───────────────────────────────────────────────────────────
+  let specificBarbersOpen = false; // tracks whether the "pick specific barber" section is expanded
+
+  window.selectNextAvailable = function() {
+    // Select the Next Available option and collapse specific barber section
+    selectedBarber = { id: '__next__', name: 'Next Available', noPreference: true };
+    document.getElementById('next-avail-card').classList.add('selected');
+    document.getElementById('next-avail-check').style.display = 'flex';
+    document.getElementById('btn-barber-next').disabled = false;
+    // Deselect any specific barber cards
+    document.querySelectorAll('.barber-card').forEach(c => c.classList.remove('selected'));
+  };
+
+  window.toggleSpecificBarbers = function() {
+    specificBarbersOpen = !specificBarbersOpen;
+    const section = document.getElementById('specific-barbers-section');
+    const btn     = document.getElementById('pick-specific-btn');
+    section.style.display = specificBarbersOpen ? 'block' : 'none';
+    btn.innerHTML = specificBarbersOpen
+      ? `Choose a specific barber ${icon('chevron-up',14,'margin-left:2px;')}`
+      : `Choose a specific barber ${icon('chevron-down',14,'margin-left:2px;')}`;
+    lucide.createIcons();
+  };
+
+  function renderBarbers() {
+    const noBarbers   = document.getElementById('no-barbers');
+    const bookSection = document.getElementById('book-only-section');
+    const bookList    = document.getElementById('book-only-list');
+    selectedBarber    = null;
+    specificBarbersOpen = false;
+    document.getElementById('btn-barber-next').disabled = true;
+
+    // Hide all sections first
+    document.getElementById('next-available-default').style.display  = 'none';
+    document.getElementById('specific-barbers-section').style.display = 'none';
+    document.getElementById('single-barber-section').style.display   = 'none';
+    noBarbers.style.display = 'none';
+
+    if (barbers.length === 0) {
+      noBarbers.style.display = 'block';
+      return;
+    }
+
+    if (barbers.length > 1) {
+      // ── Multiple barbers: show Next Available as default, specific barbers hidden ──
+      const minWait = Math.min(...barbers.map(b => {
+        const w = queueEntries.filter(e =>
+          e.barberId === b.id && (e.status === 'waiting' || e.status === 'notified')
+        ).length;
+        return w * (b.avgServiceTime ?? 30);
+      }));
+
+      document.getElementById('next-avail-wait-label').innerHTML =
+        minWait === 0
+          ? `${icon('zap',13,'margin-right:4px;')}No wait right now!`
+          : `~${minWait}m estimated wait`;
+      lucide.createIcons();
+      document.getElementById('next-available-default').style.display = 'block';
+      document.getElementById('next-avail-card').classList.add('selected');
+
+      // Auto-select Next Available
+      selectedBarber = { id: '__next__', name: 'Next Available', noPreference: true };
+      document.getElementById('btn-barber-next').disabled = false;
+
+      // Build specific barber grid (hidden until toggled)
+      const grid = document.getElementById('barbers-grid');
+      grid.innerHTML = '';
+      barbers.forEach(barber => {
+        const waiting  = queueEntries.filter(e =>
+          e.barberId === barber.id && (e.status === 'waiting' || e.status === 'notified')
+        ).length;
+        const waitMins = waiting * (barber.avgServiceTime ?? 30);
+        const initial  = escapeHtml((barber.name || '?').charAt(0).toUpperCase());
+        const card = document.createElement('div');
+        card.className = 'barber-card';
+        card.onclick   = () => {
+          selectBarber(barber, card);
+          // Deselect the Next Available card when a specific barber is picked
+          document.getElementById('next-avail-card').classList.remove('selected');
+        };
+        card.innerHTML = `
+          <div class="barber-avatar">
+            ${barber.photoUrl
+              ? `<img src="${escapeHtml(barber.photoUrl)}" alt="${escapeHtml(barber.name)}" onerror="this.style.display='none';this.parentElement.textContent='${initial}'">`
+              : initial}
+          </div>
+          <div class="barber-name">${escapeHtml(barber.name)}</div>
+          <div class="barber-badge">${waiting === 0 ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#2ECC71;margin-right:5px;vertical-align:middle;"></span>No wait` : `~${waitMins}m wait`}</div>
+        `;
+        grid.appendChild(card);
+      });
+
+    } else {
+      // ── Only 1 barber: skip the Next Available concept, show them directly ──
+      const singleGrid = document.getElementById('barbers-grid-single');
+      document.getElementById('single-barber-section').style.display = 'block';
+      singleGrid.innerHTML = '';
+      const barber  = barbers[0];
+      const waiting = queueEntries.filter(e =>
+        e.barberId === barber.id && (e.status === 'waiting' || e.status === 'notified')
+      ).length;
+      const waitMins = waiting * (barber.avgServiceTime ?? 30);
+      const initial  = escapeHtml((barber.name || '?').charAt(0).toUpperCase());
+      const card = document.createElement('div');
+      card.className = 'barber-card';
+      card.onclick   = () => selectBarber(barber, card);
+      card.innerHTML = `
+        <div class="barber-avatar">
+          ${barber.photoUrl
+            ? `<img src="${escapeHtml(barber.photoUrl)}" alt="${escapeHtml(barber.name)}" onerror="this.style.display='none';this.parentElement.textContent='${initial}'">`
+            : initial}
+        </div>
+        <div class="barber-name">${escapeHtml(barber.name)}</div>
+        <div class="barber-badge">${waiting === 0 ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:4px;vertical-align:middle;"></span>No wait' : `~${waitMins}m wait`}</div>
+      `;
+      singleGrid.appendChild(card);
+    }
+
+    // ── Book-only barbers (not live, but have a booking URL) ──
+    const liveIds = new Set(barbers.map(b => b.id));
+    const bookOnlyBarbers = allShopBarbers
+      .filter(b => !liveIds.has(b.id) && b.bookingUrl);
+
+    if (bookOnlyBarbers.length > 0) {
+      bookSection.style.display = 'block';
+      bookList.innerHTML = bookOnlyBarbers.map(b => {
+        const initial = escapeHtml((b.name || '?').charAt(0).toUpperCase());
+        return `
+          <div class="book-only-card">
+            ${b.photoUrl
+              ? `<div class="book-only-avatar"><img src="${escapeHtml(b.photoUrl)}" alt="${escapeHtml(b.name)}" onerror="this.style.display='none';this.parentElement.textContent='${initial}'"></div>`
+              : `<div class="book-only-avatar">${initial}</div>`
+            }
+            <div class="book-only-info">
+              <div class="book-only-name">${escapeHtml(b.name)}</div>
+              <div class="book-only-label">Not taking walk-ins right now</div>
+            </div>
+            <a href="${sanitizeUrl(b.bookingUrl)}" target="_blank" rel="noopener" class="btn-book-now">Book Now</a>
+          </div>
+        `;
+      }).join('');
+    } else {
+      bookSection.style.display = 'none';
+    }
+  }
+
+  function selectBarber(barber, card) {
+    selectedBarber = barber;
+    document.querySelectorAll('.barber-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    document.getElementById('btn-barber-next').disabled = false;
+  }
+
+  // ── Services screen ──────────────────────────────────────────────────────────
+  function renderServices() {
+    const list     = document.getElementById('services-list');
+    selectedService = null;
+    document.getElementById('btn-service-next').disabled = true;
+    list.innerHTML = '';
+
+    // If a specific barber was chosen, filter to their services.
+    // "Next Available" has no specific serviceIds, so show all services.
+    const available = (selectedBarber?.serviceIds?.length > 0 && selectedBarber.id !== '__next__')
+      ? services.filter(s => selectedBarber.serviceIds.includes(s.id))
+      : services;
+
+    available.forEach(service => {
+      const card = document.createElement('div');
+      card.className = 'service-card';
+      card.onclick   = () => selectService(service, card);
+
+      const duration = service.estimatedMinutes ? `${service.estimatedMinutes} min` : '';
+      const price    = service.price            ? `$${service.price}`               : '';
+
+      card.innerHTML = `
+        <div>
+          <div class="service-name">${escapeHtml(service.name)}</div>
+          ${duration ? `<div class="service-duration">${escapeHtml(duration)}</div>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${price ? `<div class="service-price">${escapeHtml(price)}</div>` : ''}
+          <div class="service-check">
+            <svg width="14" height="10" viewBox="0 0 14 10" fill="none">
+              <path d="M1 5L5 9L13 1" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      `;
+
+      list.appendChild(card);
+    });
+  }
+
+  function selectService(service, card) {
+    selectedService = service;
+    document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    document.getElementById('btn-service-next').disabled = false;
+  }
+
+  // ── Walk-in submission (sign-in sheet model) ─────────────────────────────────
+  // All walk-ins go into the shared pool: barberId = '__next__', noPreference = true.
+  // No barber or service selection — any available barber claims them in FIFO order.
+  //
+  // When groupSize > 1, each person gets their OWN independent Firestore document
+  // so any barber can claim each one separately. They share a groupId UUID so the
+  // barber app can display them as "came together" without coupling their status.
+  window.submitWalkIn = async function() {
+    const name = nameInput.value.trim();
+    if (name.length < 2) return;
+
+    const btn = document.getElementById('btn-namephone-next');
+    btn.disabled    = true;
+    btn.textContent = 'Checking in...';
+
+    // Calculate position in the pool + rough estimated wait
+    const poolEntries = queueEntries.filter(e =>
+      (e.barberId === '__next__' || e.noPreference === true) &&
+      (e.status === 'waiting' || e.status === 'notified')
+    );
+    const liveCount = barbers.length;
+    const basePosition = poolEntries.length + 1;
+
+    // Rough estimate: how many rounds of barbers until this person gets served
+    const avgTime = liveCount > 0
+      ? Math.round(barbers.reduce((s, b) => s + (b.avgServiceTime ?? 30), 0) / liveCount)
+      : 30;
+    const inChairCount  = queueEntries.filter(e => e.status === 'in_chair').length;
+    const openChairs    = Math.max(0, liveCount - inChairCount);
+    const estimatedWait = openChairs > 0 ? 0 : Math.ceil(poolEntries.length / Math.max(1, liveCount)) * avgTime;
+
+    // Shared groupId — links all entries visually without coupling their status.
+    // For solo check-ins (groupSize == 1), groupId is omitted to keep entries clean.
+    const sharedGroupId = groupSize > 1 ? crypto.randomUUID() : null;
+
+    try {
+      // Create one independent Firestore document per person.
+      // Each can be claimed by any barber separately — no more all-or-nothing groups.
+      let firstEntryId = null;
+      for (let i = 0; i < groupSize; i++) {
+        // Primary person keeps their name; guests get a clear label
+        const entryName = i === 0 ? name : `${name} (guest ${i + 1})`;
+
+        const docData = {
+          customerName:         entryName,
+          customerPhone:        i === 0 ? '' : '',  // only primary has phone (empty for now)
+          barberId:             '__next__',           // shared pool — any barber claims
+          status:               'waiting',
+          position:             basePosition + i,
+          checkInTime:          serverTimestamp(),
+          estimatedWaitMinutes: estimatedWait + (i * avgTime),
+          noPreference:         true,
+          isAppointment:        false,
+          isRemoteCheckIn:      !isFromQR,           // true = remote (website link), false = at shop (QR)
+          remoteStatus:         !isFromQR ? 'on_the_way' : null,
+          notifiedAlmostUp:     false,
+          notifiedYoureUp:      false,
+          checkedInViaWeb:      true,
+        };
+
+        // Only attach group fields when there are multiple people
+        if (sharedGroupId) {
+          docData.groupId    = sharedGroupId;   // shared UUID — links the group visually
+          docData.partyIndex = i + 1;           // 1-based: who in the group this person is
+          docData.groupSize  = groupSize;       // total people in the group (same for all)
+        }
+
+        const ref = await addDoc(collection(db, 'shops', shopId, 'queue'), docData);
+        if (i === 0) firstEntryId = ref.id;
+      }
+
+      // Redirect to live queue tracker so they can watch their position
+      window.location.replace(
+        `https://upnext-app.com/queue?shop=${shopId}&entry=${firstEntryId}&new=1`
+      );
+
+    } catch (err) {
+      console.error('Walk-in check-in error:', err);
+      btn.disabled  = false;
+      btn.innerHTML = `Check In ${icon('arrow-right',16,'margin-left:4px;')}`;
+      const code = err && err.code ? err.code : 'unknown';
+      const msg  = err && err.message ? err.message : 'Please try again.';
+      alert(`Couldn't check in (${code}).\n\n${msg}`);
+    }
+  };
+
+  // ── Check-in submission ──────────────────────────────────────────────────────
+  window.submitCheckIn = async function() {
+    if (!selectedBarber || !selectedService) return;
+
+    const btn       = document.getElementById('btn-service-next');
+    btn.disabled    = true;
+    btn.textContent = 'Checking in...';
+
+    const name  = nameInput.value.trim();
+    const phone = '';  // SMS not yet active — field re-enabled when A2P is approved
+
+    // Calculate position + estimated wait
+    // For "Next Available", use the shortest queue among all live barbers
+    const isNextAvailable = selectedBarber.id === '__next__';
+    let waitingCount, position, estimatedWait;
+
+    if (isNextAvailable) {
+      // Find barber with shortest queue to estimate wait
+      let minWait = Infinity, minWaiting = 0;
+      barbers.forEach(b => {
+        const w = queueEntries.filter(e =>
+          e.barberId === b.id && (e.status === 'waiting' || e.status === 'notified')
+        ).length;
+        const est = w * (b.avgServiceTime ?? 30);
+        if (est < minWait) { minWait = est; minWaiting = w; }
+      });
+      waitingCount  = minWaiting;
+      estimatedWait = minWait === Infinity ? 0 : minWait;
+      // Position in the "next available" pool is just the total unassigned + 1
+      const nextPool = queueEntries.filter(e => e.barberId === '__next__' && (e.status === 'waiting' || e.status === 'notified')).length;
+      position = nextPool + 1;
+    } else {
+      const barberQueue  = queueEntries.filter(e =>
+        e.barberId === selectedBarber.id &&
+        (e.status === 'waiting' || e.status === 'notified' || e.status === 'in_chair')
+      );
+      waitingCount  = barberQueue.filter(e => e.status === 'waiting' || e.status === 'notified').length;
+      position      = waitingCount + 1;
+      estimatedWait = waitingCount * (selectedBarber.avgServiceTime ?? 30);
+    }
+
+    // Shared groupId — links all entries for this group visually without coupling their status.
+    // Barbers see "Carlos (1 of 3)", "Carlos (2 of 3)" etc. and each entry is independently claimable.
+    const sharedGroupId = groupSize > 1 ? crypto.randomUUID() : null;
+
+    try {
+      // Add one independent queue entry per person in the group.
+      // Each person has their own Firestore document so any barber can claim them individually —
+      // no more "claim one, claim all" behavior for groups.
+      let firstEntryId = null;
+      for (let i = 0; i < groupSize; i++) {
+        // Primary person keeps their real name; guests get a readable label
+        const entryName = i === 0 ? name : `${name} (guest ${i + 1})`;
+
+        const docData = {
+          customerName:         entryName,
+          customerPhone:        i === 0 ? phone : '',   // only primary has phone
+          barberId:             selectedBarber.id,       // '__next__' for no preference
+          serviceId:            selectedService.id,
+          status:               'waiting',
+          position:             position + i,
+          checkInTime:          serverTimestamp(),
+          estimatedWaitMinutes: estimatedWait + (i * (selectedBarber.avgServiceTime ?? 30)),
+          noPreference:         isNextAvailable,
+          isRemoteCheckIn:      !isFromQR,              // true = remote (website link), false = at shop (QR)
+          remoteStatus:         !isFromQR ? 'on_the_way' : null,
+          notifiedAlmostUp:     false,
+          notifiedYoureUp:      false,
+          checkedInViaWeb:      true,
+        };
+
+        // Only attach group fields when there are multiple people — keeps solo entries clean
+        if (sharedGroupId) {
+          docData.groupId    = sharedGroupId;  // UUID shared by all members of this group
+          docData.partyIndex = i + 1;          // 1-based position within the group
+          docData.groupSize  = groupSize;      // total people (same value on all entries)
+        }
+
+        const ref = await addDoc(collection(db, 'shops', shopId, 'queue'), docData);
+        if (i === 0) firstEntryId = ref.id;
+      }
+
+      // Navigate directly to live queue tracker — no extra tap needed.
+      // Using location.replace() instead of .href to avoid Safari blocking
+      // navigation from inside async callbacks after an await.
+      if (firstEntryId) {
+        window.location.replace(`https://upnext-app.com/queue?shop=${shopId}&entry=${firstEntryId}&new=1`);
+      } else {
+        showScreen('confirmation'); // fallback (shouldn't normally happen)
+      }
+
+    } catch (err) {
+      console.error('Check-in error:', err);
+      btn.disabled  = false;
+      btn.innerHTML = `Check In ${icon('arrow-right',16,'margin-left:4px;')}`;
+      const code = err && err.code ? err.code : 'unknown';
+      const msg  = err && err.message ? err.message : 'Please try again.';
+      alert(`Couldn't check in (${code}).\n\n${msg}`);
+    }
+  };
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  function showError(msg) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error-msg').textContent = msg;
+    document.getElementById('error').style.display   = 'flex';
+  }
+
+  // Kick it off
+  init();
+</script>
+</body>
+</html>
