@@ -1,11 +1,19 @@
 # UpNext — Walk-In Queue Manager for Barbershops
 
-## Project Overview
-UpNext is a two-app walk-in management system for barbershops:
-- iPad Kiosk App: Customer-facing check-in experience (Swift/UIKit)
-- iPhone App: Barber queue management + owner dashboard (Swift/SwiftUI)
+> *"Modern check-in for walk-in shops — QR code, TV display, or kiosk, your choice."*
 
-Customers sign in at the kiosk → see their wait time → barbers manage their queue on iPhone → customers get texted when it's their turn.
+## Project Overview
+UpNext is a multi-surface walk-in management system for barbershops.
+
+**Primary surface (the daily driver):**
+- **iPhone app** — Owner dashboard runs BOTH live queue operations (who's next, assign barbers, mark complete) AND business analytics (revenue, barber performance, customer data). Also hosts the per-barber queue view. This is where shops spend their day.
+
+**Customer-facing check-in surfaces (shop's choice — see "Check-In System" below):**
+- **Web** (`upnext-app.com`) — Hosts the actual customer check-in form (QR scan target), the Live Wait remote check-in flow, and the customer's queue tracker page
+- **iPad app** — Kiosk mode for shops that want a dedicated check-in tablet
+- **TV display mode** — Lobby queue visualization, also doubles as a QR placement option
+
+QR-based check-in is the default in-person mode. The iPad kiosk is one of three QR placements (printed, TV, kiosk), not the headline product.
 
 ## CRITICAL POSITIONING: Walk-Ins Only — NOT a Booking App
 UpNext does NOT replace Square, Booksy, or any booking platform. It works ALONGSIDE whatever scheduling tool a shop already uses. The pitch: "Keep your booking app. UpNext handles the walk-ins."
@@ -29,8 +37,52 @@ Key feature: "Go Live" toggle — appointment-only barbers can make themselves a
 - Version Control: GitHub
 
 ## Web Presence
-- Official product website: **upnext-app.com** — deployed via Firebase Hosting from `public/`. This is the canonical marketing site and signup flow; point all new work and external links here.
+- Official product website: **upnext-app.com** — deployed via Firebase Hosting from `public/`. Serves three distinct purposes:
+  1. **Marketing** — `index.html` and supporting pages (privacy, terms, etc.)
+  2. **Owner signup/login** — `signup.html`, `login.html` (Firebase Auth + Stripe Payment Links)
+  3. **Customer check-in flows** — `checkin.html` (QR scan target), `wait.html` (Live Wait remote check-in), `queue.html` (customer's own queue tracker with "I'm Here" button), plus `qrcode.html`, `barber.html`, `join.html`
+- The `public/` folder is **not** just marketing — it actively serves customer-facing product flows. Point all new web work here.
 - Legacy site: getupnextapp.com (Netlify) — **being decommissioned**. Should be redirected to upnext-app.com or taken down. Do not reference, link to, or deploy new work to this domain.
+
+## Check-In System
+
+UpNext supports **two distinct check-in entry points**. A shop can use either or both.
+
+### 1. In-Person Check-In (QR-based)
+- Generates an actual scannable QR code
+- Three placement options:
+  - **Printed QR** — physical sign in the shop
+  - **TV QR** — displayed on a lobby TV
+  - **Kiosk QR** — shown on the iPad kiosk app
+- All three lead to the same customer-facing form (`public/checkin.html`)
+- Customer scans → fills out the form on their phone (or directly on the kiosk) → joins the queue, physically present from the moment of check-in
+
+### 2. Live Wait (remote check-in link)
+- Generates a **shareable URL** (NOT a QR code) — owners paste it on their website, social media, Google Business profile, etc.
+- Public-facing: anyone visiting the link sees the current wait time before deciding to come in
+- Customer can check in remotely from anywhere
+- Flow:
+  1. Customer hits the link (`public/wait.html`), fills out the form → joins queue with `remoteStatus: "on_the_way"`
+  2. Customer's queue tracker (`public/queue.html`) shows a 30-minute countdown + "I'm Here" button
+  3. Tapping "I'm Here" flips `remoteStatus` to `"arrived"` and pushes a notification to the assigned barber (`functions/src/pushNotifications.ts`)
+  4. If the timer expires without the customer tapping "I'm Here," a scheduled Cloud Function auto-removes the entry (`functions/src/remoteCleanup.ts`, runs every 5 minutes)
+
+### Status data model — read this before touching queue code
+The product describes the customer journey in three states ("in person waiting", "on the way", "arrived") but the code implements them as **two parallel fields** on `QueueEntry`:
+
+| Customer journey | `status` (`QueueStatus` enum) | `remoteStatus` (`String?`) |
+|---|---|---|
+| In-person, waiting | `.waiting` (`"waiting"`) | `nil` |
+| Remote, on the way | `.waiting` (`"waiting"`) | `"on_the_way"` |
+| Remote, arrived | `.waiting` (`"waiting"`) | `"arrived"` |
+
+Key implications:
+- `status` tracks the **main queue progression** (waiting → notified → in_chair → completed → walked_out / removed)
+- `remoteStatus` is an **optional secondary state** that exists ONLY for Live Wait check-ins. In-person check-ins leave it `nil`.
+- Do NOT add `"in_person_waiting"` to the `QueueStatus` enum — in-person is just "waiting with no remoteStatus"
+- The literal string is `"on_the_way"` (snake_case), not `"on their way"`
+
+Defined in `UpNext/Shared/Models/QueueEntry.swift:88-93, 118-123`.
 
 ## Project Structure
 ```
@@ -56,7 +108,7 @@ UpNext/
 │   │   ├── remoteCleanup.ts   # Scheduled queue cleanup (live)
 │   │   └── notifications.ts   # SMS triggers (stub — not exported)
 │   └── package.json
-├── public/                    # Firebase Hosting site (upnext-app.com): signup, login, marketing
+├── public/                    # Firebase Hosting site (upnext-app.com): marketing + signup/login + customer check-in flows (QR + Live Wait). NOT just marketing.
 └── README.md
 ```
 
@@ -128,10 +180,25 @@ When a user signs up on web and pays via Stripe **before** opening the iOS app, 
 - subscriptionStatus, subscriptionTier
 
 ## Current Development Phase
-Phase 1 — MVP: Core check-in loop (sign in → wait → queue management → SMS notification)
+Phase 1 — MVP: Core check-in loop (sign in → wait → queue management → push notification via APNs through `functions/src/pushNotifications.ts`)
 Testing exclusively at Fademasters Barbershop in Waco, TX before public launch.
 
-## Key Screens (iPad Kiosk)
+## Key Screens (iPhone — primary surface)
+1. Login — Email/PIN + Face ID/Touch ID
+2. Barber View: My Queue — "Go Live" toggle (available for walk-ins), current client, up next list, swipe actions (Start/Skip/Remove), Mark Done
+3. Owner View: Dashboard — All barbers, all queues, live queue operations (reassign, remove, manual add)
+4. Owner View: Analytics — Clients served, wait times, walk-outs, peak hours, revenue, barber performance, customer data
+5. Owner View: Settings — Shop info, barber management, service menu, QR code generation, Live Wait link, notification config, billing
+
+## Key Screens (Customer-facing check-in surfaces)
+
+### Web (`upnext-app.com`)
+- `checkin.html` — Customer check-in form (QR scan target for in-person check-ins)
+- `wait.html` — Live Wait landing page (public wait time + remote check-in form)
+- `queue.html` — Customer's own queue tracker (position, ETA, "I'm Here" button for Live Wait)
+- `qrcode.html`, `barber.html`, `join.html` — supporting flows
+
+### iPad Kiosk App (one of three in-person QR placements)
 1. Welcome/Attract Screen — "Walk In? Sign In Here." + current wait time
 2. Name & Phone Input — Large touch targets, on-screen keyboard
 3. Choose Your Barber — Grid of barber cards with queue count + wait estimate
@@ -139,14 +206,13 @@ Testing exclusively at Fademasters Barbershop in Waco, TX before public launch.
 5. Confirmation — "You're checked in!" + position + estimated wait
 6. Live Queue Display (idle mode) — Shows current queue for the lobby
 
-## Key Screens (iPhone App)
-7. Login — Email/PIN + Face ID/Touch ID
-8. Barber View: My Queue — "Go Live" toggle (available for walk-ins), current client, up next list, swipe actions (Start/Skip/Remove), Mark Done
-9. Owner View: Dashboard — All barbers, all queues, quick actions (reassign, remove, manual add)
-10. Owner View: Analytics (Phase 2) — Clients served, wait times, walk-outs, peak hours
-11. Owner View: Settings — Shop info, barber management, service menu, notification config, billing
+### TV Display Mode
+- Lobby queue visualization (current queue + estimated waits) with the shop's check-in QR overlay
 
 ## Design Guidelines
+
+> **TODO (audit pending):** This section may contain stale Fademasters-era branding. Verify against `upnext-brand-kit.html` and update during next CLAUDE.md audit pass.
+
 - Dark backgrounds with gold accents (#C9A84C) — matches Fademasters branding
 - Clean, modern, premium feel — this is a paid subscription product
 - iPad kiosk: Large touch targets (minimum 44pt), high contrast, readable from 3+ feet
