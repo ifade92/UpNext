@@ -14,17 +14,23 @@ Key feature: "Go Live" toggle — appointment-only barbers can make themselves a
 
 ## Business Model
 - Monthly SaaS subscription for barbershop owners
-- Starter: $49/mo (1-5 barbers), Pro: $79/mo (6-15 barbers), Enterprise: $129/mo (16+)
+- Single Location: $49.99/month — currently active and available (Stripe tier `base`)
+- Multi-Location: $79.99/month — Coming Soon (marketed but not yet available; Stripe tier `multi`)
 - 14-day free trial, no credit card required
+- Note: `Shop.swift` retains legacy `starter`/`pro`/`enterprise` enum cases for backward compatibility with older shop docs. New shops use `base`/`multi`.
 
 ## Tech Stack
 - Language: Swift 5.9+
 - UI: SwiftUI (iPhone app), UIKit (iPad kiosk — for kiosk mode/Guided Access support)
-- Backend: Firebase (Cloud Firestore for real-time DB, Firebase Auth, Cloud Functions)
-- SMS: Twilio (customer notifications — "you're almost up" and "you're up")
-- Subscriptions: RevenueCat (handles App Store subscription logic)
-- Distribution: App Store Connect
+- Backend: Firebase (Cloud Firestore, Firebase Auth, Cloud Functions, Firebase Hosting)
+- Subscriptions: RevenueCat (App Store) + Stripe (web) — see "Payments & Subscriptions" below for the full architecture
+- SMS: not currently wired up. The `twilio` package is installed in `functions/package.json` but unused — `notifications.ts` is stubbed and not exported. **Cleanup candidate** if SMS isn't on the near-term roadmap.
+- Distribution: App Store Connect (iOS), Firebase Hosting (web)
 - Version Control: GitHub
+
+## Web Presence
+- Official product website: **upnext-app.com** — deployed via Firebase Hosting from `public/`. This is the canonical marketing site and signup flow; point all new work and external links here.
+- Legacy site: getupnextapp.com (Netlify) — **being decommissioned**. Should be redirected to upnext-app.com or taken down. Do not reference, link to, or deploy new work to this domain.
 
 ## Project Structure
 ```
@@ -32,7 +38,7 @@ UpNext/
 ├── UpNext.xcodeproj
 ├── Shared/                    # Code shared between both targets
 │   ├── Models/                # Data models (Shop, Barber, QueueEntry, Service, Customer)
-│   ├── Services/              # Firebase, Twilio, RevenueCat service layers
+│   ├── Services/              # Firebase, RevenueCat service layers
 │   ├── Utilities/             # Extensions, helpers, constants
 │   └── Config/                # Firebase config, API keys (gitignored)
 ├── UpNext-Kiosk/              # iPad kiosk target
@@ -43,12 +49,14 @@ UpNext/
 │   ├── Views/                 # SwiftUI views
 │   ├── ViewModels/            # Barber/owner view models
 │   └── Assets.xcassets
-├── CloudFunctions/            # Firebase Cloud Functions (TypeScript)
+├── functions/                 # Firebase Cloud Functions (TypeScript)
 │   ├── src/
-│   │   ├── notifications.ts   # SMS trigger logic
-│   │   ├── queue.ts           # Queue management logic
-│   │   └── analytics.ts      # Daily reports, stats calculation
+│   │   ├── pushNotifications.ts # APNs push triggers (live)
+│   │   ├── stripeWebhook.ts   # Stripe → Firestore subscription sync (live)
+│   │   ├── remoteCleanup.ts   # Scheduled queue cleanup (live)
+│   │   └── notifications.ts   # SMS triggers (stub — not exported)
 │   └── package.json
+├── public/                    # Firebase Hosting site (upnext-app.com): signup, login, marketing
 └── README.md
 ```
 
@@ -60,6 +68,41 @@ UpNext/
   - `shops/{shopId}/queueHistory/{queueEntryId}` — Completed/archived entries
 - `users/{userId}` — Auth accounts (role: owner or barber)
 - `customers/{phoneNumber}` — Return customer recognition data
+
+## Payments & Subscriptions
+
+UpNext runs a **hybrid subscription system** with two payment paths and one shared state store:
+
+- **iOS App Store subscribers** → RevenueCat
+- **Web subscribers** → Stripe (Payment Links from `public/signup.html`)
+- **Convergence point** → Firestore `shops/{shopId}` document
+
+### Subscription fields on `shops/{shopId}`
+- `subscriptionStatus`: `active | past_due | cancelled | trial`
+- `subscriptionTier`: `base` ($49.99) or `multi` ($79.99) — see Business Model for legacy enum notes
+- `stripeCustomerId`, `stripeSubscriptionId`, `stripeEmail`
+
+### How iOS checks subscription (paywall gate)
+`ContentView.swift:54-56` is a 3-way OR:
+```
+paywallBypassed (DEBUG only)
+|| subscriptionManager.isSubscribed     // RevenueCat: Purchases.shared.customerInfo()
+|| authViewModel.isSubscribedViaStripe  // Firestore: shop.subscriptionStatus ∈ {active, pastDue}
+```
+`SubscriptionManager.swift` queries RevenueCat for entitlements `UpNext Pro` (any active sub) and `UpNext Multi` (multi-location). `AuthViewModel.swift` reads the shop doc for the Stripe path.
+
+### How web checks subscription
+Reads the Firestore shop doc directly. There is currently **no subscription enforcement on web login** — `public/login.html` only does Firebase Auth. The shop doc is kept fresh by the Stripe webhook.
+
+### Sync between platforms
+- **Web → iOS: works.** `functions/src/stripeWebhook.ts` handles `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.payment_failed`. It writes status/tier into the shop doc, which iOS reads on login.
+- **iOS → web: does NOT sync.** RevenueCat status is never propagated back to Firestore. An App Store-only subscriber is invisible to anything web-side.
+
+### Firestore security rules
+`firestore.rules` does **not** enforce subscription state — all gating is client-side. Do not assume server-side protection of paid features.
+
+### Known gap: pendingSubscriptions handoff
+When a user signs up on web and pays via Stripe **before** opening the iOS app, the webhook can't yet find a shop matching the Stripe email, so it writes the subscription to `pendingSubscriptions/{email}` for later promotion. iOS **does not currently read this collection** — `AuthViewModel.loadShop()` only fetches the shop doc, so the user hits the paywall on first iOS launch despite having paid. Tracked separately as a bug; do not assume the web→iOS handoff works end-to-end yet.
 
 ## Data Models (Swift)
 
