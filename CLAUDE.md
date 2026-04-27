@@ -348,6 +348,29 @@ Gagalin is a self-hosted custom font in `public/fonts/` used only for printable 
 - iPhone app: Standard iOS patterns, SwiftUI native components.
 - Overall feel: clean, modern, premium — this is a paid subscription product.
 
+## Development Workflow
+
+All code changes go through this flow — no direct commits to main.
+
+1. **Branch.** Create a feature branch off main (descriptive names preferred, e.g. `fix-icon-loading`, `update-pricing-tier`). Auto-generated names are fine for sprawling sessions.
+
+2. **Work on the branch.** Make commits as needed. The standing rule still applies: never auto-commit, always show diffs first, wait for explicit approval before saving.
+
+3. **Push the branch to origin.** This makes the work visible on GitHub but doesn't merge anything yet.
+
+4. **Open a PR against main.** Use the GitHub web UI (gh CLI is not installed on this machine). Title should match the commit message convention. Description should cover what changed and why, by section if multiple things changed.
+
+5. **Run /wrapup before merging.** This drafts the CHANGELOG.md entry, scans CLAUDE.md for staleness, and proposes the merge commit.
+
+6. **Merge the PR.** Carlos clicks merge. Branch can be deleted after.
+
+**Hard stops that still apply:**
+- Subscription code changes (RevenueCat, Stripe, Firestore subscription state) require explicit approval before commit.
+- `firestore.rules` changes require explicit approval before commit.
+- Kiosk flow changes require explicit approval before commit.
+
+**Production deploys are separate from main.** Firebase Hosting deploys happen via `firebase deploy --only hosting` and can ship before a PR is merged. Cloud Functions and Firestore rules deploy separately.
+
 ## Coding Standards
 - Use MVVM architecture (Model-View-ViewModel)
 - All Firebase calls go through service layer classes (never directly in views)
