@@ -25,7 +25,7 @@ Key feature: "Go Live" toggle — appointment-only barbers can make themselves a
 - Monthly SaaS subscription for barbershop owners
 - Single Location: $49.99/month — currently active and available (Stripe tier `base`)
 - Multi-Location: $79.99/month — Coming Soon (marketed but not yet available; Stripe tier `multi`)
-- 14-day free trial, no credit card required
+- No free trial — new signups go straight to the paywall (subscribe via RevenueCat on iOS or Stripe on web). 30-day money-back guarantee instead. Local shop owners can use the `WACO` promo code for a free first month.
 - Note: `Shop.swift` retains legacy `starter`/`pro`/`enterprise` enum cases for backward compatibility with older shop docs. New shops use `base`/`multi`.
 
 ## Tech Stack
@@ -362,6 +362,14 @@ Gagalin is a self-hosted custom font in `public/fonts/` used only for printable 
 3. Create the ViewModel
 4. Build the View last
 5. Test with hardcoded data first, then connect to Firebase
+
+## Session Wrap-Up
+
+At the end of every coding session, run `/wrapup` (defined in `.claude/commands/wrapup.md`). It walks the diff, drafts a CHANGELOG.md entry in the established style, scans CLAUDE.md for staleness, and commits everything together on approval.
+
+Decision rules:
+- **CHANGELOG.md** — append an entry for every user-visible or behavior-affecting change. Skip pure refactors, comment-only edits, and doc-only edits to CHANGELOG/CLAUDE itself.
+- **CLAUDE.md** — update only when a documented fact is now wrong, a new architectural piece exists, or a documented gap is resolved. Implementation details belong in CHANGELOG, not CLAUDE.md.
 
 ## Important Context
 - Carlos is testing this at his own barbershop (Fademasters) with ~15 barbers

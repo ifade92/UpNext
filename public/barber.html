@@ -1725,6 +1725,7 @@ async function loadBarberView() {
   if (dateEl) dateEl.textContent = new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
 
   showView('barber');
+  lucide.createIcons(); // Render static <i data-lucide> chrome icons (topnav, tabs, settings rows)
   startBarberListeners();
 }
 
@@ -1854,6 +1855,7 @@ async function loadOwnerView() {
   if (ownerDateEl) ownerDateEl.textContent = new Date().toLocaleDateString([], { month: 'short', day: 'numeric' });
 
   showView('owner');
+  lucide.createIcons(); // Render static <i data-lucide> chrome icons (topnav, tabs, settings rows)
   startOwnerListeners();
 }
 
