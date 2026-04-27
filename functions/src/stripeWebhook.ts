@@ -4,7 +4,7 @@
  * Handles Stripe webhook events to keep Firestore subscription data in sync.
  *
  * Flow:
- *   1. Customer subscribes via Stripe Payment Link on getupnextapp.com
+ *   1. Customer subscribes via Stripe Payment Link on upnext-app.com
  *   2. Stripe sends a webhook event to this Cloud Function
  *   3. We update the shop's subscription status/tier in Firestore
  *   4. The iOS app reads Firestore and unlocks features automatically

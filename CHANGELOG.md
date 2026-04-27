@@ -4,6 +4,42 @@ All notable changes to the UpNext project are logged here.
 
 ---
 
+## [2026-04-26] — New-Account UX Fixes + Stripe Flow Cleanup
+
+### Fixed — Web dashboard icons missing for new accounts (Critical UX)
+- **Root cause:** `loadOwnerView` and `loadBarberView` in `public/barber.html` called `showView(...)` but never `lucide.createIcons()` afterward. Static `<i data-lucide="...">` chrome icons (topnav avatar/gear/analytics, bottom-nav tabs, settings rows, shop action tiles) only got rendered as a side effect when one of the `render*()` functions called `lucide.createIcons()` (which sweeps the whole DOM). For accounts with ≥1 barber, `renderSettingsBarbers()` triggered the global sweep. For brand-new accounts with `allBarbers = []`, the empty-state branch returned early before that call. Net: chrome icons stayed as raw `<i>` tags until the user happened to add a barber or service.
+- **Fix:** added `lucide.createIcons()` immediately after `showView(...)` in both `loadOwnerView` and `loadBarberView`. Chrome renders on first paint regardless of dataset state.
+
+### Fixed — iPhone "Not found: shop {shopId}" popup for new web signups (Critical)
+- **Root cause:** `public/signup.html` wrote shop docs with only `name`, `ownerName`, `ownerEmail`, `ownerId`, `selectedPlan`, `subscriptionTier`, `subscriptionStatus`, `createdAt`, `createdVia`. But `Shop.swift` requires `address`, `hours`, and `settings` as non-optional. iOS Shop decode failed in `try? doc.data(as: Shop.self)`. `FirebaseService.fetchShop` then threw `documentNotFound("Shop \(shopId) not found")` — the misleading popup. Dashboard otherwise loaded because barber/queue/service listeners are independent of the Shop struct.
+- **Compounded by:** `AuthViewModel.loadShop()` silently swallowed the same decode failure and left `self.shop = nil`, making `isSubscribedViaStripe` always return false for affected accounts — meaning Stripe-paid users could fail the iOS paywall gate after successful payment.
+- **Fix:** `signup.html` now writes `address: ''`, a default 7-day `hours` map (Mon–Sat open, Sun closed), and a default `settings` object — all matching `FirebaseService.createShop()` on iOS. Web and iOS signups now produce structurally identical shop docs.
+- **Note:** existing test accounts created before this fix still have incomplete shop docs and will still throw the popup until deleted/re-signed-up or backfilled in Firestore.
+
+### Changed — Post-payment flow now routes entirely through upnext-app.com
+- Stripe Payment Link "After payment" redirect updated in the Stripe dashboard from `getupnextapp.com/success` to `https://upnext-app.com/success`. `public/success.html` was already self-contained with relative URLs (`/barber`, `/login`) and needed no code changes.
+- "Allow promotion codes" enabled on the same Payment Link in the Stripe dashboard so the WACO promo code field appears at checkout. End-to-end verified: WACO applies 100% off the first month, $49.99 recurring after; webhook flips Firestore `subscriptionStatus` to `active`; iOS paywall unlocks.
+- Cosmetic: `functions/src/stripeWebhook.ts` header comment updated `getupnextapp.com` → `upnext-app.com` (no behavior change, no redeploy needed).
+
+### Changed — CLAUDE.md trial section corrected
+- The Business Model section still said "14-day free trial, no credit card required" — but the trial system was removed in the 2026-04-21 release. Updated to reflect reality: no trial, 30-day money-back guarantee, WACO promo code for local owners.
+
+### Added — `/wrapup` slash command for ongoing doc hygiene
+- New `.claude/commands/wrapup.md` formalizes the end-of-session checklist: gather diff, draft CHANGELOG entry in the established style, scan CLAUDE.md for staleness, show diffs, commit on approval. Decision rules baked in: CHANGELOG = every user-visible / behavior-affecting change; CLAUDE.md = only when documented facts become wrong or new architectural pieces exist.
+- Background: a full month of changes had accumulated without doc updates, requiring a weekend of catch-up work. The wrap-up command is the prevention.
+
+### Deployed
+- Firebase Hosting redeployed with `barber.html` + `signup.html` fixes. Cloud Functions and Firestore rules unchanged.
+
+### Files touched
+- `public/barber.html` — `lucide.createIcons()` after `showView` in `loadOwnerView` + `loadBarberView`
+- `public/signup.html` — shop doc now writes `address`, `hours`, `settings` matching iOS defaults
+- `functions/src/stripeWebhook.ts` — cosmetic comment update
+- `CLAUDE.md` — Business Model trial line corrected; new "Session Wrap-Up" section
+- `.claude/commands/wrapup.md` — new end-of-session slash command
+
+---
+
 ## [2026-04-24] — Web Signup, Sign-In & Home Page Fixes
 
 ### Fixed — Web signups couldn't sign back in (Critical)

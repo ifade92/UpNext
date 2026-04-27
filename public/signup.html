@@ -581,13 +581,33 @@ footer {
         displayName: firstName + ' ' + lastName
       });
 
-      // 3. Create the shop document in Firestore
-      //    This mirrors the structure the iOS app expects
+      // 3. Create the shop document in Firestore.
+      //    Must include address/hours/settings — Shop.swift requires them as
+      //    non-optional, so iOS Shop decode fails without them and surfaces
+      //    a misleading "Not found: shop" popup. Defaults mirror
+      //    FirebaseService.createShop() on iOS so both flows produce identical docs.
       await db.collection('shops').doc(user.uid).set({
         name: shopName,
+        address: '',
         ownerName: firstName + ' ' + lastName,
         ownerEmail: email,
         ownerId: user.uid,
+        hours: {
+          monday:    { open: '09:00', close: '19:00', isOpen: true },
+          tuesday:   { open: '09:00', close: '19:00', isOpen: true },
+          wednesday: { open: '09:00', close: '19:00', isOpen: true },
+          thursday:  { open: '09:00', close: '19:00', isOpen: true },
+          friday:    { open: '09:00', close: '19:00', isOpen: true },
+          saturday:  { open: '09:00', close: '17:00', isOpen: true },
+          sunday:    { open: '10:00', close: '16:00', isOpen: false },
+        },
+        settings: {
+          showPricesOnKiosk: true,
+          notifyWhenPositionAway: 2,
+          queueDisplayMode: 'both',
+          almostUpSmsTemplate: "Hey {name}, you're almost up at {shop}! Get ready.",
+          youreUpSmsTemplate: "Hey {name}, it's your turn! Head on over to {shop}.",
+        },
         selectedPlan: selectedPlan,
         subscriptionTier: 'base',       // Default tier — updated by Stripe webhook after payment
         subscriptionStatus: 'cancelled',  // No subscription yet — activated by Stripe webhook
