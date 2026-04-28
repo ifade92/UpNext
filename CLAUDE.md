@@ -16,6 +16,8 @@ UpNext is a multi-surface walk-in management system for barbershops.
 
 QR-based check-in is the default in-person mode. The iPad kiosk is one of three QR placements (printed, TV, kiosk), not the headline product.
 
+> Brand voice and content tone are defined in `docs/brand-voice.md`. Any content-creation work (social media, marketing copy, landing pages) reads that file first.
+
 ## CRITICAL POSITIONING: Walk-Ins Only — NOT a Booking App
 UpNext does NOT replace Square, Booksy, or any booking platform. It works ALONGSIDE whatever scheduling tool a shop already uses. The pitch: "Keep your booking app. UpNext handles the walk-ins."
 
