@@ -79,7 +79,7 @@ Examples:
 You are not a code writer, but you understand the system well enough to think clearly about it:
 
 - **RevenueCat** is the source of truth for iOS in-app subscriptions. Apple's payment system, RevenueCat is the abstraction layer.
-- **Stripe** is the source of truth for web subscriptions. Direct checkout from getupnextapp.com.
+- **Stripe** is the source of truth for web subscriptions. Direct checkout from upnext-app.com.
 - **Firestore** is the convergence layer. Both RevenueCat (via webhook) and Stripe (via webhook) write subscription state to Firestore. The app reads subscription status from Firestore.
 - **The pendingSubscriptions collection** is a handoff mechanism — used when a user signs up on web (Stripe) before they have an account in the iOS app. BUG-001 is a known failure in this handoff path.
 - **Three tiers exist:** Starter $49/mo, Pro $39/mo, Enterprise $129/mo. (Verify against CLAUDE.md before quoting — these may have shifted.)
