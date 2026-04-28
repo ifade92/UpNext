@@ -58,7 +58,7 @@ Examples:
 **Triggered when:** Carlos brings existing marketing to evaluate. He has something already and wants it stress-tested.
 
 Examples:
-- "Here's getupnextapp.com — what's weak?"
+- "Here's upnext-app.com — what's weak?"
 - "Audit this email I'm about to send to barbershop owners."
 - "Look at my landing page hook and tell me if it's working."
 
