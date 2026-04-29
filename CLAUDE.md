@@ -103,19 +103,22 @@ Key implications:
 Defined in `UpNext/Shared/Models/QueueEntry.swift` (see Data Models section for field-level detail).
 
 ## Project Structure
+
+UpNext ships as a **single universal Xcode target** (bundle ID `com.carlos.upnext.UpNext`, `TARGETED_DEVICE_FAMILY = "1,2"`). The folders below are code organization within that one target — they are NOT separate Xcode targets. iPhone and iPad surfaces share the same compiled binary, App Store listing, and version number.
+
 ```
 UpNext/
 ├── UpNext.xcodeproj
-├── Shared/                    # Code shared between both targets
+├── Shared/                    # Code shared across all surfaces
 │   ├── Models/                # Data models (AppUser, Shop, Barber, QueueEntry, Service, Customer)
 │   ├── Services/              # Firebase, RevenueCat service layers
 │   ├── Utilities/             # Extensions, helpers, constants
 │   └── Config/                # Firebase config, API keys (gitignored)
-├── UpNext-Kiosk/              # iPad kiosk target
+├── UpNext-Kiosk/              # iPad kiosk surface (UIKit)
 │   ├── Views/                 # UIKit view controllers
 │   ├── ViewModels/            # Kiosk-specific view models
 │   └── Assets.xcassets
-├── UpNext-Barber/             # iPhone barber/owner target
+├── UpNext-Barber/             # iPhone barber/owner surface (SwiftUI)
 │   ├── Views/                 # SwiftUI views
 │   ├── ViewModels/            # Barber/owner view models
 │   └── Assets.xcassets

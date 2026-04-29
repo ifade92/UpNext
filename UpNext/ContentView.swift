@@ -24,7 +24,7 @@ import SwiftUI
 // Paywall bypass — only active in DEBUG builds (Xcode previews & simulators).
 // Release builds compiled for the App Store always enforce the paywall.
 #if DEBUG
-private let paywallBypassed = true  // Set to true to skip paywall during development
+private let paywallBypassed = false  // Set to true to skip paywall during development
 #else
 private let paywallBypassed = false
 #endif
