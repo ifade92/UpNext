@@ -590,14 +590,33 @@ struct OwnerDashboardView: View {
 
         return HStack(spacing: 14) {
 
-            // Avatar / initial bubble
+            // Avatar — uploaded photo if present, otherwise the colored initial bubble
             ZStack {
-                Circle()
-                    .fill(isLive ? Color.accent.opacity(0.15) : Color.white.opacity(0.06))
+                if let urlString = barber.photoUrl, let url = URL(string: urlString) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 44, height: 44, alignment: .top)
+                                .clipShape(Circle())
+                        default:
+                            Circle()
+                                .fill(isLive ? Color.accent.opacity(0.15) : Color.white.opacity(0.06))
+                                .frame(width: 44, height: 44)
+                        }
+                    }
                     .frame(width: 44, height: 44)
-                Text(String(barber.name.prefix(1)).uppercased())
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(isLive ? Color.accent : .white.opacity(0.4))
+                    .overlay(Circle().stroke(isLive ? Color.accent : Color.clear, lineWidth: 2))
+                } else {
+                    Circle()
+                        .fill(isLive ? Color.accent.opacity(0.15) : Color.white.opacity(0.06))
+                        .frame(width: 44, height: 44)
+                    Text(String(barber.name.prefix(1)).uppercased())
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(isLive ? Color.accent : .white.opacity(0.4))
+                }
             }
 
             // Name + status text
