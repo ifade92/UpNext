@@ -4,6 +4,60 @@ All notable changes to the UpNext project are logged here.
 
 ---
 
+## [2026-04-28] — Pre-Submission App Store Review Prep
+
+### Fixed — RevenueCat paywall Subscribe button stayed greyed out (Critical IAP blocker)
+- **Root cause:** `UpNext/UpNextApp.swift` configured RevenueCat with two different API keys via `#if DEBUG` — the DEBUG key (`test_*` prefix) was a RevenueCat **Test Store** key, a mock store that doesn't connect to App Store Connect. Comment in the code mistakenly called it a "Sandbox key", confusing two separate concepts: RC's Test Store (mock) vs Apple's StoreKit sandbox (the real ASC environment for testing). Result: every Debug build fetched zero products from a mock store; paywall's Subscribe button had nothing to attach to and stayed disabled.
+- **Fix:** removed the `#if DEBUG` branch entirely. Single App Store key (`appl_*`) for both Debug and Release. RevenueCat auto-detects sandbox vs production from Apple's StoreKit receipt environment — separate keys are not needed.
+- Verified: Subscribe button activates in Debug builds with the App Store key + sandbox tester signed in. RC dashboard's "Could not check" status on `upnext_base_monthly` flips to valid once a real product fetch succeeds.
+
+### Added — Paywall Terms of Use + Privacy Policy links (App Store guideline 3.1.2)
+- Apple requires functional Terms + Privacy links accessible from the paywall *before* purchase. The footer had the auto-renewal disclosure but no tappable links. Added an HStack with two `Link` components below the disclosure, pointing to `https://upnext-app.com/terms.html` and `https://upnext-app.com/privacy.html`.
+- Verified working on real iPhone — taps open Safari to the right pages.
+
+### Added — `PrivacyInfo.xcprivacy` privacy manifest
+- Required by Apple since May 2024 for any app linking Firebase / RevenueCat / FCM. Declares the data UpNext collects (phone number, name, email, user ID, device ID, purchase history) with `NSPrivacyCollectedDataTypePurposeAppFunctionality`. `NSPrivacyTracking` is `false` (UpNext does no cross-app tracking).
+- File added to the UpNext target via Xcode so it's bundled at build time.
+
+### Added — `ITSAppUsesNonExemptEncryption = false` to `Info.plist`
+- Avoids the "encryption usage" prompt on every TestFlight upload. UpNext only uses HTTPS (Firebase, RevenueCat, Stripe) and standard StoreKit, all of which qualify as exempt encryption.
+
+### Changed — Privacy Policy + Terms accuracy cleanup (deployed)
+- Both `public/privacy.html` and `public/terms.html` claimed UpNext sends SMS notifications via Twilio with STOP/HELP opt-out flows. Twilio is uninstalled per CLAUDE.md, `notifications.ts` is a stub, no SMS is actually sent. App Review can reject if a privacy policy describes data practices the app doesn't perform.
+  - **`privacy.html`:** removed "SMS Messaging & Opt-Out" section, removed Twilio from third-party services, rewrote "How We Use Your Information" to reflect actual usage (return-customer recognition, staff identification), updated "Information We Collect" to drop the obsolete "selected barber and service" line and add "party size".
+  - **`terms.html`:** removed entire "SMS Messaging Program" section (3 highlight blocks with STOP/HELP language), removed "Carrier Support" section, reworded "No Marketing Messages" to drop SMS-specific language, reworded "Limitation of Liability" to drop carrier/SMS references.
+- Both files: contact email `ccanales71@gmail.com` → `support@upnext-app.com`. Last-updated date refreshed to April 28, 2026.
+
+### Changed — `paywallBypassed` flipped to `false` in Debug
+- `UpNext/ContentView.swift` had `paywallBypassed = true` even in Debug. Flipped to `false` so the paywall renders on real-device sandbox testing without needing a code change. Release builds were already enforcing the paywall regardless.
+
+### Removed — Generic placeholder app store screenshots
+- All 10 PNGs in `AppStoreScreenshots/` (`01_go_live.png` through `10_hero.png`) deleted. They were generic mockups, not finished marketing assets. Real screenshots will be captured from device + simulator before submission.
+
+### Added — Pre-submission documentation suite
+- `docs/app-store-submission-audit.md` — full pre-submission audit by ios-advisor: blockers, screenshot requirements, metadata recommendations, high-risk rejection triggers, day-of-submit checklist.
+- `docs/revenuecat-asc-setup.md` — strategic-level RevenueCat + ASC setup guide by monetization-payments: 6-step structure with the v1.0 Multi-Location decision, ASC subscription group flow, RevenueCat dashboard verification, sandbox testing, common pitfalls.
+- `docs/iap-walkthrough.md` — click-by-click IAP setup walkthrough for the actual ASC state: sideline `upnext_multi_monthly` (Missing Metadata, don't attach to v1.0), complete `upnext_base_monthly` metadata (price $49.99, US-only, "Single Location" display name, IAP review screenshot at 1290×2796), RevenueCat verification (Offerings, `UpNext Pro` entitlement attachment), sandbox testing on real device, submission-day attach + demo account credentials.
+
+### Deployed
+- **Firebase Hosting redeployed** with `public/privacy.html` + `public/terms.html` updates. 13 files uploaded. Live URLs verified post-deploy: `https://upnext-app.com/privacy.html` and `/terms.html` both show April 28 date and `support@upnext-app.com` contact.
+
+### Files touched
+- `UpNext/UpNextApp.swift` — single App Store RevenueCat key, removed misleading `#if DEBUG` Test Store branch
+- `UpNext/Shared/Views/PaywallView.swift` — Terms + Privacy `Link` HStack added to `footerSection`
+- `UpNext/PrivacyInfo.xcprivacy` — new file, six declared data types
+- `UpNext/Info.plist` — `ITSAppUsesNonExemptEncryption = false`
+- `UpNext/ContentView.swift` — `paywallBypassed = false` in Debug
+- `public/privacy.html` — SMS sections removed, contact email updated, date bumped
+- `public/terms.html` — SMS sections removed, contact email updated, date bumped
+- `AppStoreScreenshots/*.png` — 10 generic placeholder PNGs removed
+- `docs/app-store-submission-audit.md` — new
+- `docs/revenuecat-asc-setup.md` — new
+- `docs/iap-walkthrough.md` — new
+- `CLAUDE.md` — Project Structure section corrected (one universal target, not two)
+
+---
+
 ## [2026-04-26] — New-Account UX Fixes + Stripe Flow Cleanup
 
 ### Fixed — Web dashboard icons missing for new accounts (Critical UX)

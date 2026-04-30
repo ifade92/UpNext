@@ -13,14 +13,14 @@ import FirebaseCore
 import FirebaseMessaging
 import RevenueCat
 
-// MARK: - RevenueCat API Keys
-// DEBUG  → Sandbox key (test purchases only, no real charges)
-// RELEASE → Production key (live App Store subscriptions)
-#if DEBUG
-private let revenueCatAPIKey = "test_XXhotbGXLwHaWrKfvhprjwOdRqK"
-#else
+// MARK: - RevenueCat API Key
+// Single App Store key for both Debug and Release. RevenueCat auto-detects
+// sandbox vs production from Apple's StoreKit receipt environment — no
+// separate keys needed. The previous DEBUG key (`test_*`) was a Test Store
+// key, a mock store with no ASC connection, which prevented real sandbox
+// purchases from working and caused the paywall's Subscribe button to
+// stay greyed out (no products could be fetched).
 private let revenueCatAPIKey = "appl_jJckDkuXmbYbMKyCyjkpNsSfEYh"
-#endif
 
 // AppDelegate handles third-party SDK setup.
 // We use UIApplicationDelegate because these SDKs need to run before

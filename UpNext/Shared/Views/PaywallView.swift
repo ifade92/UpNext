@@ -332,6 +332,15 @@ struct PaywallView: View {
                 .foregroundColor(.white.opacity(0.25))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
+
+            // Required by App Store guideline 3.1.2 — Terms + Privacy must be
+            // accessible from the paywall before purchase.
+            HStack(spacing: 24) {
+                Link("Terms of Use", destination: URL(string: "https://upnext-app.com/terms.html")!)
+                Link("Privacy Policy", destination: URL(string: "https://upnext-app.com/privacy.html")!)
+            }
+            .font(.system(size: 11, weight: .medium))
+            .foregroundColor(.white.opacity(0.45))
         }
     }
 }
