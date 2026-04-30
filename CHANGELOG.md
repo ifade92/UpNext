@@ -12,6 +12,12 @@ All notable changes to the UpNext project are logged here.
 - **Migration impact:** existing Fademasters barber photos at the OLD iOS path become inaccessible after the rules deploy. ~15 photos to re-upload manually after deploy — no migration script for a single-shop scale.
 - **Investigation note:** the original bug report flagged a "new-barber edge case" where the photo upload silently no-ops if `barber.id` is `nil`. Feature-builder confirmed this is unreachable in current UI — `AddBarberSheet` has no photo control; only `EditBarberSheet` (opened only for existing barbers) does. The defensive guard at `ShopSettingsView.swift:1248` is correct as-is. No edit needed there.
 
+### Fixed — Owner dashboard barber rows missing avatar photos (regression)
+- **Root cause:** commit `2da8f6a` (April 24, "Catch up project to GitHub") accidentally dropped the `AsyncImage` block from `OwnerDashboardView.barberToggleRow` during a project-tree sync. Pre-regression code rendered the uploaded photo with a 44pt circle + accent-colored stroke when the barber was live, falling back to the initial-letter bubble otherwise. Post-regression, only the initial-letter bubble rendered. Latent until BUG-003 was fixed — once uploads worked again, the missing render became visible.
+- **Fix:** restored the `AsyncImage(url:phase:)` block at `OwnerDashboardView.swift:594` matching the original styling. Live state still drives the circle stroke + fill colors; non-photo barbers still fall through to the initial bubble.
+- Verified on a real device — uploaded photo replaces correctly, fallback works for barbers without a photo, accent stroke shows when barber is live.
+- **Out of scope (not regressions, never had photo rendering):** `ShopSettingsView` Barbers tab list, kiosk barber picker (kiosk has no barber picker per CLAUDE.md). `Barber.swift` model comment claiming "shown on kiosk barber selection grid" is stale.
+
 ### Fixed — Stale FCM token routed pushes to old account after sign-out (BUG-002)
 - **Root cause:** on sign-out, the iOS app cleared a local `currentUserId` variable but never deleted `users/{oldUserId}.fcmToken` from Firestore and never called `Messaging.messaging().deleteToken()`. When the next user signed in, the same FCM token was written to the new user's doc via `setData(merge: true)`, leaving the old user's field intact and still valid. The Cloud Function backend (`pushNotifications.ts`) routes per `users/{uid}.fcmToken`, so the device received pushes for both accounts. Built-in stale-token cleanup never fired because the token was genuinely registered.
 - **Fix:** new `NotificationManager.clearTokenForCurrentUser()` async method deletes the Firestore field via `FieldValue.delete()` and calls `Messaging.messaging().deleteToken()` to invalidate the token on FCM's side. Each step has independent try/catch so a network blip doesn't block the other or block sign-out. `AuthViewModel.signOut()` is now async — awaits the cleanup BEFORE `Auth.auth().signOut()` because the Firestore write requires authenticated user. Both sign-out call sites (`BarberQueueView`, `OwnerDashboardView`) updated to wrap in `Task { await ... }`.
@@ -27,7 +33,7 @@ All notable changes to the UpNext project are logged here.
 - `UpNext/Shared/Services/NotificationManager.swift` — added async `clearTokenForCurrentUser`; replaced `teardown()`
 - `UpNext/UpNext-Barber/ViewModels/AuthViewModel.swift` — `signOut()` is now async, awaits FCM cleanup before Auth sign-out
 - `UpNext/UpNext-Barber/Views/BarberQueueView.swift` — sign-out alert button wraps in `Task`
-- `UpNext/UpNext-Barber/Views/OwnerDashboardView.swift` — `onSignOut` closure wraps in `Task`
+- `UpNext/UpNext-Barber/Views/OwnerDashboardView.swift` — `onSignOut` closure wraps in `Task`; restored AsyncImage avatar in `barberToggleRow` (regression from `2da8f6a`)
 - `UpNext/Info.plist` — added `NSPhotoLibraryUsageDescription`
 - `storage.rules` — new file at repo root, default-deny + barber-photo allow
 - `firebase.json` — new `"storage"` block referencing `storage.rules`
