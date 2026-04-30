@@ -2,7 +2,7 @@
 
 > Living doc. Update as items complete. Check this first when resuming a session.
 
-**Current state:** First-time submission prep. Sandbox IAP verified end-to-end. ~5 remaining items before submit.
+**Current state:** First-time submission prep. Sandbox IAP verified end-to-end. Subscription attached to v1.0. ~4 remaining items before submit.
 
 **Last updated:** 2026-04-29
 
@@ -20,6 +20,7 @@
 ### App Store Connect
 - Two subscriptions created: `upnext_base_monthly` (Ready to Submit), `upnext_multi_monthly` (Missing Metadata, sidelined)
 - IAP review screenshot uploaded to `upnext_base_monthly` (1290×2796)
+- `upnext_base_monthly` attached to v1.0 via "In-App Purchases and Subscriptions" section on the version page
 - App Store Connect API key generated (Team Key, App Manager role) — `.p8` saved locally as `AuthKey_V2LTCYMP45.p8`
 
 ### RevenueCat
@@ -35,15 +36,19 @@
 
 ## 🔵 Remaining before submit
 
-1. **Step 5a — verify subscription auto-attaches to v1.0 version.** Modern ASC may auto-include subscriptions from the same Subscription Group when "Ready to Submit". Navigate ASC → My Apps → UpNext - Walk-In Manager → 1.0 Prepare for Submission → scroll for any "In-App Purchases and Subscriptions" section. If none exists, you're done with this step.
+1. **Demo Firestore account for App Review.** Create `appreview@upnext-app.com` in Firebase Auth. Seed Firestore: `users/{uid}` (role: owner), `shops/{uid}` with `subscriptionStatus: "active"`, `subscriptionTier: "base"`, plus 2-3 sample barbers and services. Capture the credentials for ASC Review Notes.
 
-2. **Demo Firestore account for App Review.** Create `appreview@upnext-app.com` in Firebase Auth. Seed Firestore: `users/{uid}` (role: owner), `shops/{uid}` with `subscriptionStatus: "active"`, `subscriptionTier: "base"`, plus 2-3 sample barbers and services. Capture the credentials for ASC Review Notes.
+2. **Capture real App Store screenshots.** Need iPhone 6.9" (1290×2796 or 1320×2868) and iPad 13" (2064×2752). 3-10 per size. Audit `docs/app-store-submission-audit.md` Section 2 has content recommendations. Replace the deleted generic placeholders.
+   - **Status 2026-04-29:** Carlos has 7 device screenshots from real Fademasters use, but they're 1206×2622 (iPhone 6.3", below 6.9" requirement). Walk-in customer names scrubbed via Pillow script (saved to `screenshots/edited/`). To-do: retake on iPhone 16 Pro Max simulator at 1290×2796, then re-scrub names if needed.
 
-3. **Capture real App Store screenshots.** Need iPhone 6.9" (1290×2796 or 1320×2868) and iPad 13" (2064×2752). 3-10 per size. Audit `docs/app-store-submission-audit.md` Section 2 has content recommendations. Replace the deleted generic placeholders.
+3. **Fill remaining ASC metadata.** ✅ Mostly done 2026-04-29.
+   - App Information: filled (name, subtitle, category, privacy URL, copyright)
+   - Version 1.0 text: filled (promo text, description, keywords, support/marketing URLs)
+   - App Privacy: filled (6 data types — Name, Email, Phone, User ID, Device ID, Purchase History; all linked, none used for tracking, App Functionality purpose)
+   - Age Rating: filled → 4+
+   - App Review Information: contact + notes filled. **Sign-In credentials still pending demo account creation.**
 
-4. **Fill remaining ASC metadata.** App Information (subtitle, promo text, description, keywords, category), App Privacy questionnaire, Age Rating, Review Notes (with demo credentials). Audit Section 3 has draft copy.
-
-5. **Submit.**
+4. **Submit.**
 
 ---
 
