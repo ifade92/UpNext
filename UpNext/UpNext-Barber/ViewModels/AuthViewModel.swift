@@ -278,10 +278,16 @@ class AuthViewModel: ObservableObject {
 
     // MARK: - Sign Out
 
-    func signOut() {
+    /// Signs the user out completely.
+    /// Must be async because we need to clear the FCM token from Firestore
+    /// BEFORE Auth.auth().signOut() — once auth is gone, Firestore rules
+    /// block the user from updating their own doc.
+    func signOut() async {
+        FirebaseService.shared.removeAllListeners()
+
+        await NotificationManager.shared.clearTokenForCurrentUser()
+
         do {
-            FirebaseService.shared.removeAllListeners()
-            NotificationManager.shared.teardown() // Clear stored userId on sign out
             try Auth.auth().signOut()
             appUser = nil
             shop = nil

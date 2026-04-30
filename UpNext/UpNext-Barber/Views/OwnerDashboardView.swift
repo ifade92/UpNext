@@ -96,7 +96,7 @@ struct OwnerDashboardView: View {
             ShopSettingsView(
                 viewModel: ShopSettingsViewModel(shopId: viewModel.shopId),
                 showDismissButton: true,
-                onSignOut: { authViewModel.signOut() },
+                onSignOut: { Task { await authViewModel.signOut() } },
                 barberId: authViewModel.appUser?.barberId,
                 appUser: authViewModel.appUser
             )

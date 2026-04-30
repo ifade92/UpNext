@@ -71,8 +71,41 @@ final class NotificationManager: NSObject {
         await refreshAndSaveToken(userId: userId)
     }
 
-    /// Clear the stored userId on sign out so stale token saves don't happen.
-    func teardown() {
+    /// Clears the FCM token from the current user's Firestore doc AND tells
+    /// Firebase Messaging to invalidate the token on its side. Call this on
+    /// sign-out BEFORE Auth.auth().signOut() — once we sign out of Auth, the
+    /// user loses Firestore write permission and the cleanup will fail.
+    ///
+    /// Why both steps:
+    ///   1. Deleting users/{userId}.fcmToken stops the backend from pushing
+    ///      to this device under the old account's name.
+    ///   2. deleteToken() forces FCM to issue a NEW token on next sign-in,
+    ///      so the new account doesn't inherit the old token (which would
+    ///      defeat the whole fix if the old user's doc somehow re-acquired it).
+    ///
+    /// Each step is wrapped independently so a network blip on one doesn't
+    /// block the other or block sign-out itself.
+    func clearTokenForCurrentUser() async {
+        guard let userId = currentUserId else {
+            return
+        }
+
+        do {
+            try await db.collection("users").document(userId).updateData([
+                "fcmToken": FieldValue.delete()
+            ])
+            print("[NotificationManager] FCM token cleared for user \(userId)")
+        } catch {
+            print("[NotificationManager] Failed to clear FCM token in Firestore: \(error.localizedDescription)")
+        }
+
+        do {
+            try await Messaging.messaging().deleteToken()
+            print("[NotificationManager] FCM token deleted on Messaging side")
+        } catch {
+            print("[NotificationManager] Failed to delete FCM token: \(error.localizedDescription)")
+        }
+
         currentUserId = nil
     }
 
