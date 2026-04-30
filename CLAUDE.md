@@ -363,7 +363,7 @@ All code changes go through this flow — no direct commits to main.
 
 3. **Push the branch to origin.** This makes the work visible on GitHub but doesn't merge anything yet.
 
-4. **Open a PR against main.** Use the GitHub web UI (gh CLI is not installed on this machine). Title should match the commit message convention. Description should cover what changed and why, by section if multiple things changed.
+4. **Open a PR against main.** Use the GitHub web UI or `gh` CLI. Title should match the commit message convention. Description should cover what changed and why, by section if multiple things changed.
 
 5. **Run /wrapup before merging.** This drafts the CHANGELOG.md entry, scans CLAUDE.md for staleness, and proposes the merge commit.
 
@@ -371,10 +371,10 @@ All code changes go through this flow — no direct commits to main.
 
 **Hard stops that still apply:**
 - Subscription code changes (RevenueCat, Stripe, Firestore subscription state) require explicit approval before commit.
-- `firestore.rules` changes require explicit approval before commit.
+- `firestore.rules` and `storage.rules` changes require explicit approval before commit.
 - Kiosk flow changes require explicit approval before commit.
 
-**Production deploys are separate from main.** Firebase Hosting deploys happen via `firebase deploy --only hosting` and can ship before a PR is merged. Cloud Functions and Firestore rules deploy separately.
+**Production deploys are separate from main.** Firebase Hosting deploys happen via `firebase deploy --only hosting` and can ship before a PR is merged. Cloud Functions, Firestore rules, and Storage rules deploy separately.
 
 ## Coding Standards
 - Use MVVM architecture (Model-View-ViewModel)
