@@ -4,6 +4,38 @@ All notable changes to the UpNext project are logged here.
 
 ---
 
+## [2026-04-30] — iOS Bug Fixes: Photo Upload + FCM Token Cleanup
+
+### Fixed — iOS barber photo upload silently failed (BUG-003)
+- **Root cause:** iOS uploaded to `barbers/{shopId}/{barberId}/profile.jpg` while the web dashboard wrote to `shops/{shopId}/barbers/{barberId}/photo`. Firebase Storage rules — which lived only in the Firebase Console, never version-controlled — were written around the web path, so iOS uploads were denied at the rules gate. Also: `firebase.json` did not configure Storage at all, no `storage.rules` file existed in the repo, and `Info.plist` was missing `NSPhotoLibraryUsageDescription`.
+- **Fix:** unified both clients on the web path (`shops/{shopId}/barbers/{barberId}/photo.jpg`) by updating `FirebaseService.uploadBarberPhoto`. Created `storage.rules` at repo root with public read on barber photos (needed for unauthenticated customer-facing surfaces), authenticated write only, 5MB + image-MIME guards, and default-deny everywhere else. Wired into `firebase.json` so rules are now version-controlled and deployable. Added `NSPhotoLibraryUsageDescription` purpose string to `Info.plist` for App Store review compliance.
+- **Migration impact:** existing Fademasters barber photos at the OLD iOS path become inaccessible after the rules deploy. ~15 photos to re-upload manually after deploy — no migration script for a single-shop scale.
+- **Investigation note:** the original bug report flagged a "new-barber edge case" where the photo upload silently no-ops if `barber.id` is `nil`. Feature-builder confirmed this is unreachable in current UI — `AddBarberSheet` has no photo control; only `EditBarberSheet` (opened only for existing barbers) does. The defensive guard at `ShopSettingsView.swift:1248` is correct as-is. No edit needed there.
+
+### Fixed — Stale FCM token routed pushes to old account after sign-out (BUG-002)
+- **Root cause:** on sign-out, the iOS app cleared a local `currentUserId` variable but never deleted `users/{oldUserId}.fcmToken` from Firestore and never called `Messaging.messaging().deleteToken()`. When the next user signed in, the same FCM token was written to the new user's doc via `setData(merge: true)`, leaving the old user's field intact and still valid. The Cloud Function backend (`pushNotifications.ts`) routes per `users/{uid}.fcmToken`, so the device received pushes for both accounts. Built-in stale-token cleanup never fired because the token was genuinely registered.
+- **Fix:** new `NotificationManager.clearTokenForCurrentUser()` async method deletes the Firestore field via `FieldValue.delete()` and calls `Messaging.messaging().deleteToken()` to invalidate the token on FCM's side. Each step has independent try/catch so a network blip doesn't block the other or block sign-out. `AuthViewModel.signOut()` is now async — awaits the cleanup BEFORE `Auth.auth().signOut()` because the Firestore write requires authenticated user. Both sign-out call sites (`BarberQueueView`, `OwnerDashboardView`) updated to wrap in `Task { await ... }`.
+
+### Added — Versioned `storage.rules` + `firebase.json` storage block
+- First Storage rules ever committed to the repo. Previously rules existed only in the Firebase Console with no audit trail. Default-deny catch-all means any future Storage path needs an explicit rule before it works.
+
+### Deployed
+- **Storage rules deployed** to `upnext-4ec7a` via `firebase deploy --only storage`. New rules now live in production. Existing barber photos at the old iOS path (`barbers/{shopId}/...`) are inaccessible until photos are re-uploaded to the new path — Carlos to re-upload all ~15 Fademasters barber photos manually.
+
+### Files touched
+- `UpNext/Shared/Services/FirebaseService.swift` — `uploadBarberPhoto` writes to `shops/{shopId}/barbers/{barberId}/photo.jpg` (matches web path)
+- `UpNext/Shared/Services/NotificationManager.swift` — added async `clearTokenForCurrentUser`; replaced `teardown()`
+- `UpNext/UpNext-Barber/ViewModels/AuthViewModel.swift` — `signOut()` is now async, awaits FCM cleanup before Auth sign-out
+- `UpNext/UpNext-Barber/Views/BarberQueueView.swift` — sign-out alert button wraps in `Task`
+- `UpNext/UpNext-Barber/Views/OwnerDashboardView.swift` — `onSignOut` closure wraps in `Task`
+- `UpNext/Info.plist` — added `NSPhotoLibraryUsageDescription`
+- `storage.rules` — new file at repo root, default-deny + barber-photo allow
+- `firebase.json` — new `"storage"` block referencing `storage.rules`
+- `BUGS.md` — appended BUG-002 and BUG-003 entries
+- `CLAUDE.md` — added `storage.rules` to hard stops list; updated production deploy categories; updated gh CLI note (now installed on desktop)
+
+---
+
 ## [2026-04-28] — Pre-Submission App Store Review Prep
 
 ### Fixed — RevenueCat paywall Subscribe button stayed greyed out (Critical IAP blocker)

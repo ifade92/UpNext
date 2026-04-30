@@ -290,10 +290,14 @@ class FirebaseService: ObservableObject {
 
     /// Upload a barber's profile photo and return the download URL.
     /// The image is compressed to JPEG before upload to keep Storage costs low.
-    /// Path: barbers/{shopId}/{barberId}/profile.jpg
+    /// Path: shops/{shopId}/barbers/{barberId}/photo.jpg
+    /// Matches the path used by the web dashboard (public/barber.html) so both
+    /// clients read/write the same Storage object and storage.rules only needs
+    /// one rule. Previously iOS wrote to barbers/{shopId}/{barberId}/profile.jpg,
+    /// which the live rules denied.
     func uploadBarberPhoto(shopId: String, barberId: String, image: UIImage) async throws -> String {
         let storageRef = Storage.storage().reference()
-            .child("barbers/\(shopId)/\(barberId)/profile.jpg")
+            .child("shops/\(shopId)/barbers/\(barberId)/photo.jpg")
 
         // Compress to JPEG at 0.75 quality — good balance of quality vs file size
         guard let imageData = image.jpegData(compressionQuality: 0.75) else {

@@ -74,7 +74,9 @@ struct BarberQueueView: View {
         .onAppear    { viewModel.onAppear()    }
         .onDisappear { viewModel.onDisappear() }
         .alert("Sign Out", isPresented: $showSignOutAlert) {
-            Button("Sign Out", role: .destructive) { authViewModel.signOut() }
+            Button("Sign Out", role: .destructive) {
+                Task { await authViewModel.signOut() }
+            }
             Button("Cancel",   role: .cancel)      { }
         } message: {
             Text("Are you sure you want to sign out?")
