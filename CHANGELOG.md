@@ -4,6 +4,43 @@ All notable changes to the UpNext project are logged here.
 
 ---
 
+## [2026-05-02] — Manage Subscription / Cancel Flow + Resubscribe Path
+
+### Added — In-app subscription management on iOS and web
+- **Why:** UpNext shipped without any in-app way for paying customers to cancel. App Store Guideline 3.1.2 requires a working "Manage Subscription" path for any app with auto-renewable subs, and the absence of one on web meant cancelling required emailing support — friction that doesn't help anyone.
+- **iOS:** Settings → Account now shows a SUBSCRIPTION section (Plan + Status + action button). Action branches by state:
+  - App Store subscriber → opens Apple's native sheet via `Purchases.shared.showManageSubscriptions()` (with deep-link fallback to `apps.apple.com/account/subscriptions`).
+  - Stripe subscriber (active / past_due / trial) → opens `upnext-app.com/barber.html` in Safari to use the web portal.
+  - **Cancelled** Stripe subscriber → "Resubscribe" button opens the existing signup flow.
+- **Web (`public/barber.html`):** new "Subscription" row in Settings → opens detail panel with Plan + Status + Manage button. Tapping Manage shows a retention interstitial ("Email support" vs "Continue to cancel"); Continue calls a new Cloud Function and redirects to Stripe's hosted Customer Portal. Cancelled shops see "Resubscribe" instead, opening the Stripe Payment Link directly.
+- Refund disclosure copy added to both surfaces: 30-day money-back via support email, iOS refunds must go through Apple.
+
+### Added — `createBillingPortalSession` Cloud Function
+- HTTPS-callable function that mints a Stripe Billing Portal session for the authenticated owner. Looks up `users/{uid}` → confirms `role === "owner"` → reads `shops/{shopId}.stripeCustomerId` server-side. Never accepts a customer ID from the client (prevents one shop's owner from opening another's portal).
+- Reuses the existing `STRIPE_SECRET_KEY` secret, mirrors `stripeWebhook.ts` init pattern.
+- Cancellations made in the portal flow back to Firestore via the existing webhook handlers (`customer.subscription.updated`, `customer.subscription.deleted`) — no new sync code needed.
+
+### Added — `manageAppStoreSubscription()` on `SubscriptionManager`
+- Wraps RevenueCat's `Purchases.shared.showManageSubscriptions()` with a graceful fallback to the App Store deep link if RC errors out (e.g. Simulator).
+- Stub parity in the non-RevenueCat compile branch.
+
+### Fixed — `AccountSettingsView` env object propagation
+- `OwnerDashboardView` presents the settings sheet without explicitly injecting `authViewModel` into its environment. SwiftUI sheet content doesn't always inherit env objects from the parent — added `.environmentObject(authViewModel)` to the sheet so `AccountSettingsView` (which now reads `authViewModel.shop` for the SUBSCRIPTION section) can access it reliably.
+
+### Deployed
+- **Cloud Function `createBillingPortalSession`** deployed to `upnext-4ec7a`. Will fail at runtime until Stripe Dashboard → Customer Portal config is completed by Carlos (cancellation enabled, plan switching disabled, cancellation reason survey enabled, business info populated).
+- **`public/barber.html`** deployed via `firebase deploy --only hosting` — the Subscription panel + retention interstitial + Resubscribe button are live at `upnext-app.com`.
+
+### Files touched
+- `functions/src/createBillingPortalSession.ts` — new HTTPS-callable function
+- `functions/src/index.ts` — registered the new function export
+- `UpNext/Shared/Services/SubscriptionManager.swift` — added `manageAppStoreSubscription()` with App Store URL fallback; stub parity
+- `UpNext/UpNext-Barber/Views/ShopSettingsView.swift` — new SUBSCRIPTION section in `AccountSettingsView` with Plan/Status/action rows, branching by App Store vs Stripe vs cancelled state, refund footer copy
+- `UpNext/UpNext-Barber/Views/OwnerDashboardView.swift` — added `.environmentObject(authViewModel)` to the settings sheet
+- `public/barber.html` — Subscription nav row + detail panel + retention interstitial + Resubscribe routing
+
+---
+
 ## [2026-04-30] — iOS Bug Fixes: Photo Upload + FCM Token Cleanup
 
 ### Fixed — iOS barber photo upload silently failed (BUG-003)

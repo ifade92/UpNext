@@ -100,6 +100,11 @@ struct OwnerDashboardView: View {
                 barberId: authViewModel.appUser?.barberId,
                 appUser: authViewModel.appUser
             )
+            // Explicitly inject authViewModel into the sheet's environment.
+            // SwiftUI sheets don't reliably propagate env objects from the
+            // parent — without this, AccountSettingsView's @EnvironmentObject
+            // crashes the moment you tap into it.
+            .environmentObject(authViewModel)
         }
         // Add Walk-In sheet — owner manually adds a client from the dashboard
         .sheet(isPresented: $showAddWalkIn) {

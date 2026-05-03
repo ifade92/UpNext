@@ -25,6 +25,9 @@
 
 import Foundation
 import Combine
+#if canImport(UIKit)
+import UIKit
+#endif
 
 #if canImport(RevenueCat)
 import RevenueCat
@@ -135,6 +138,28 @@ class SubscriptionManager: ObservableObject {
         isPurchasing = false
     }
 
+    // MARK: - Manage App Store Subscription
+
+    /// Opens Apple's native "Manage Subscription" sheet for the App Store
+    /// subscriber. Lets them cancel, change plans, or change payment method —
+    /// all handled by Apple. We don't see the result here; status updates
+    /// arrive via the RevenueCat listener on next app foreground.
+    ///
+    /// If RevenueCat's manage-sheet API errors (e.g. running in Simulator,
+    /// or no active subscription found), we fall back to opening Apple's
+    /// account-level subscriptions URL in Safari so the user always gets
+    /// somewhere they can manage billing.
+    func manageAppStoreSubscription() async {
+        do {
+            try await Purchases.shared.showManageSubscriptions()
+        } catch {
+            print("RevenueCat: showManageSubscriptions failed — \(error.localizedDescription). Falling back to Apple subscriptions URL.")
+            if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                await UIApplication.shared.open(url)
+            }
+        }
+    }
+
     // MARK: - Log In / Out
 
     func logIn(userId: String) {
@@ -183,6 +208,7 @@ class SubscriptionManager: ObservableObject {
     func fetchSubscriptionStatus() async { isLoading = false }
     func fetchOfferings()          async { }
     func restorePurchases()        async { }
+    func manageAppStoreSubscription() async { }
     func logIn(userId: String)           { }
     func logOut()                        { }
 }

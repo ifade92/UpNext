@@ -34,6 +34,10 @@ export { cleanupStaleRemoteCheckIns } from "./remoteCleanup";
 //   firebase functions:secrets:set STRIPE_WEBHOOK_SECRET
 export { stripeWebhook } from "./stripeWebhook";
 
+// ── Billing Portal (Stripe Customer Portal) ─────────────────────────────────
+// HTTPS-callable: web owners click "Manage Subscription" → returns a portal URL.
+export { createBillingPortalSession } from "./createBillingPortalSession";
+
 // ── SMS Notifications (Twilio) ───────────────────────────────────────────────
 // Sends text messages to customers about their queue position.
 // Uncomment after A2P 10DLC registration is complete and Twilio is configured.

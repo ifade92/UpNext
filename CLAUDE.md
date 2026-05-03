@@ -126,6 +126,7 @@ UpNext/
 │   ├── src/
 │   │   ├── pushNotifications.ts # Push triggers via FCM (APNs underneath for iOS) — two exports: notifyStaffOnCheckIn (walk-in→all staff; appointment→assigned barber) and notifyStaffOnRemoteArrival (when "I'm Here" tapped)
 │   │   ├── stripeWebhook.ts   # Stripe → Firestore subscription sync (live)
+│   │   ├── createBillingPortalSession.ts # HTTPS-callable: mints a Stripe Customer Portal session for the authenticated owner (cancel/manage)
 │   │   ├── remoteCleanup.ts   # Scheduled queue cleanup (live)
 │   │   └── notifications.ts   # SMS triggers (stub — not exported)
 │   └── package.json
@@ -172,6 +173,11 @@ Reads the Firestore shop doc directly. There is currently **no subscription enfo
 ### Sync between platforms
 - **Web → iOS: works.** `functions/src/stripeWebhook.ts` handles `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.payment_failed`. It writes status/tier into the shop doc, which iOS reads on login.
 - **iOS → web: does NOT sync.** RevenueCat status is never propagated back to Firestore. An App Store-only subscriber is invisible to anything web-side.
+
+### Subscription management (cancel / resubscribe)
+- **iOS:** Settings → Account → SUBSCRIPTION section. App Store subs use `Purchases.shared.showManageSubscriptions()` (Apple's native sheet, in-app). Stripe subs route to `upnext-app.com/barber.html` in Safari. Cancelled Stripe subs see "Resubscribe" → opens `signup.html`.
+- **Web:** Settings → Subscription. Active / trial / past_due → retention interstitial (email support vs continue) → calls `createBillingPortalSession` Cloud Function → redirects to Stripe's hosted Customer Portal. Cancelled → "Resubscribe" → opens the Stripe Payment Link directly (the portal doesn't reliably offer "renew" once a sub is fully ended).
+- **Cloud Function `createBillingPortalSession`:** auth-gated HTTPS-callable. Verifies caller is `role === "owner"`, then mints a Stripe Billing Portal session using `shops/{shopId}.stripeCustomerId`. Never accepts a customer ID from the client. Stripe Dashboard → Customer Portal must be configured for the function to succeed at runtime.
 
 ### Firestore security rules
 `firestore.rules` does **not** enforce subscription state — all gating is client-side. Do not assume server-side protection of paid features.

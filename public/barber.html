@@ -1185,6 +1185,18 @@
             </div>
             <i data-lucide="chevron-right" class="ico" style="width:16px;height:16px;color:var(--text-3);margin-right:-2px;"></i>
           </button>
+          <!-- Subscription -->
+          <button onclick="openSettingsSection('subscription')" style="
+            display:flex;align-items:center;gap:14px;width:100%;background:transparent;
+            border:none;border-bottom:1px solid var(--border);padding:14px 16px;
+            cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:'Outfit',sans-serif;text-align:left;">
+            <div style="width:34px;height:34px;border-radius:9px;background:rgba(46,204,113,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i data-lucide="credit-card" class="ico" style="width:17px;height:17px;color:var(--accent);"></i></div>
+            <div style="flex:1;">
+              <div style="font-size:15px;font-weight:600;color:var(--text);">Subscription</div>
+              <div style="font-size:12px;color:var(--text-2);margin-top:1px;">Plan, billing &amp; cancellation</div>
+            </div>
+            <i data-lucide="chevron-right" class="ico" style="width:16px;height:16px;color:var(--text-3);margin-right:-2px;"></i>
+          </button>
           <!-- Barbers -->
           <button onclick="openSettingsSection('barbers')" style="
             display:flex;align-items:center;gap:14px;width:100%;background:transparent;
@@ -1298,6 +1310,49 @@
             <button class="btn" id="save-booking-link-btn" onclick="saveAccountBookingLink()" style="width:100%;">
               Save Booking Link
             </button>
+          </div>
+        </div>
+
+        <!-- Subscription content -->
+        <div id="settings-subscription" class="hidden" style="padding:0 16px;">
+          <div class="card" style="margin:0 0 12px;padding:16px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+              <div style="width:36px;height:36px;border-radius:10px;background:rgba(46,204,113,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i data-lucide="credit-card" class="ico" style="width:17px;height:17px;color:var(--accent);"></i>
+              </div>
+              <div>
+                <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;">Your Plan</div>
+                <div style="font-size:12px;color:var(--text-2);" id="sub-plan-line">—</div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--text-2);padding-top:12px;border-top:1px solid var(--border);">
+              <span>Status</span>
+              <span id="sub-status-line" style="color:var(--text);font-weight:600;">—</span>
+            </div>
+          </div>
+
+          <button class="btn" id="manage-subscription-btn" onclick="handleManageSubscription()" style="width:100%;margin-bottom:10px;">
+            Manage Subscription
+          </button>
+
+          <div style="font-size:11px;color:var(--text-3);line-height:1.5;padding:0 4px;">
+            Within 30 days of purchase? Email <a href="mailto:support@upnext-app.com" style="color:var(--accent);text-decoration:none;">support@upnext-app.com</a> for a refund. iOS purchases must be refunded via Apple.
+          </div>
+        </div>
+
+        <!-- Cancel retention interstitial (separate modal so it overlays on top) -->
+        <div class="modal-overlay" id="cancel-interstitial-modal">
+          <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <div class="modal-title">Sorry to see you go.</div>
+            <p style="font-size:14px;color:var(--text-2);line-height:1.5;margin:0 0 20px;">
+              Before you cancel — is there something we can help with? Most issues get sorted in a quick email. Reach us at
+              <strong style="color:var(--text);">support@upnext-app.com</strong> and we'll do our best.
+            </p>
+            <div style="display:flex;gap:10px;">
+              <a href="mailto:support@upnext-app.com?subject=UpNext%20Support" class="btn-ghost" style="flex:1;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;" onclick="closeModal('cancel-interstitial-modal')">Email support</a>
+              <button class="btn-ghost" id="continue-cancel-btn" onclick="continueToCancel()" style="flex:1;">Continue to cancel</button>
+            </div>
           </div>
         </div>
 
@@ -1539,6 +1594,9 @@ import {
 import {
   getStorage, ref as storageRef, uploadBytes, getDownloadURL
 } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js';
+import {
+  getFunctions, httpsCallable
+} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js';
 
 // ── Config ──────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -1554,6 +1612,7 @@ const app     = initializeApp(firebaseConfig);
 const auth    = getAuth(app);
 const db      = getFirestore(app);
 const storage = getStorage(app);
+const functions = getFunctions(app);
 
 // ── Security: escape user-supplied strings before injecting into innerHTML ──
 // Prevents XSS — any HTML/JS in customer names, barber names, etc. is
@@ -1606,6 +1665,8 @@ let timerInterval     = null;
 let barberSortAscending = true;  // Sort direction for barber sign-in sheet
 let ownerSortAscending  = true;  // Sort direction for owner sign-in sheet
 let currentStartTime = null;
+// Cached subscription fields from the shop doc — populated by loadOwnerView()
+let shopSubscription  = { tier: null, status: null, stripeCustomerId: null };
 
 // ── Auth state ───────────────────────────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
@@ -1841,7 +1902,17 @@ function renderBarberDashboard() {
 // ── OWNER VIEW ────────────────────────────────────────────────────────────────
 async function loadOwnerView() {
   const shopSnap = await getDoc(doc(db, 'shops', shopId));
-  const shopName = shopSnap.exists() ? shopSnap.data().name : 'Dashboard';
+  const shopData = shopSnap.exists() ? shopSnap.data() : {};
+  const shopName = shopData.name || 'Dashboard';
+
+  // Stash subscription fields so the SUBSCRIPTION settings panel can render
+  // without an extra Firestore round-trip when the user opens it.
+  shopSubscription = {
+    tier:             shopData.subscriptionTier   || null,
+    status:           shopData.subscriptionStatus || null,
+    stripeCustomerId: shopData.stripeCustomerId   || null
+  };
+
   // Stash the shop name globally so the printable poster generator
   // can stamp it on the PDF/PNG without having to refetch from Firestore.
   window.__upnextShopName = shopName;
@@ -3873,7 +3944,7 @@ window.openOwnerSettings = function() {
   const slider = document.getElementById('settings-slider');
   if (slider) slider.style.transform = 'translateX(0)';
   // Hide all content sections so nothing bleeds through on open
-  ['account','barbers','services','shop','history'].forEach(s => {
+  ['account','subscription','barbers','services','shop','history'].forEach(s => {
     const el = document.getElementById('settings-' + s);
     if (el) el.classList.add('hidden');
   });
@@ -3882,8 +3953,8 @@ window.openOwnerSettings = function() {
 
 // Navigate from the list into a specific section detail panel
 window.openSettingsSection = function(section) {
-  const sections = ['account','barbers','services','shop','history'];
-  const titles   = { account:'Account', barbers:'Barbers', services:'Services', shop:'Shop', history:'History' };
+  const sections = ['account','subscription','barbers','services','shop','history'];
+  const titles   = { account:'Account', subscription:'Subscription', barbers:'Barbers', services:'Services', shop:'Shop', history:'History' };
 
   // Hide all content sections, then show the requested one
   sections.forEach(s => {
@@ -3903,6 +3974,7 @@ window.openSettingsSection = function(section) {
 
   // Side-effects per section
   if (section === 'account') populateAccountBookingLink();
+  if (section === 'subscription') populateSubscriptionPanel();
   if (section === 'history') {
     // Pre-fill to yesterday the first time history is opened
     const inp = document.getElementById('history-date-input');
@@ -3919,10 +3991,110 @@ window.backToSettingsList = function() {
   const slider = document.getElementById('settings-slider');
   if (slider) slider.style.transform = 'translateX(0)';
   // Hide all sections on the way out so the list feels clean
-  ['account','barbers','services','shop','history'].forEach(s => {
+  ['account','subscription','barbers','services','shop','history'].forEach(s => {
     const el = document.getElementById('settings-' + s);
     if (el) el.classList.add('hidden');
   });
+};
+
+// ── SUBSCRIPTION PANEL ───────────────────────────────────────────────────────
+// Reads from the cached shopSubscription captured on loadOwnerView so we
+// don't need a fresh Firestore read every time the panel opens.
+function populateSubscriptionPanel() {
+  const planEl   = document.getElementById('sub-plan-line');
+  const statusEl = document.getElementById('sub-status-line');
+  const btnEl    = document.getElementById('manage-subscription-btn');
+  if (!planEl || !statusEl) return;
+
+  // Plan label — derive from cached tier
+  const tier = shopSubscription.tier;
+  let planLabel = '—';
+  if (tier === 'base' || tier === 'starter') {
+    planLabel = 'Single Location · $49.99/month';
+  } else if (tier === 'multi' || tier === 'pro') {
+    planLabel = 'Multi-Location · $79.99/month';
+  } else if (tier === 'enterprise') {
+    planLabel = 'Enterprise · $129/month';
+  }
+  planEl.textContent = planLabel;
+
+  // Status label — friendly capitalization
+  const status = shopSubscription.status;
+  const statusMap = {
+    active:    'Active',
+    past_due:  'Past due',
+    cancelled: 'Cancelled',
+    trial:     'Trial'
+  };
+  statusEl.textContent = statusMap[status] || '—';
+
+  // Button label flips for cancelled shops — they need a way back in,
+  // not a way out.
+  if (btnEl) {
+    btnEl.textContent = (status === 'cancelled') ? 'Resubscribe' : 'Manage Subscription';
+  }
+}
+
+// Stripe Payment Link — same one signup.html uses. Cancelled shops use
+// this to start a fresh subscription because the Stripe Customer Portal
+// doesn't reliably offer "renew" once a sub is fully ended.
+const STRIPE_RESUBSCRIBE_URL = 'https://buy.stripe.com/8x2cMZdZf2Mre0hgj873G00';
+
+// Routes the Manage button based on current state:
+//   - Cancelled → open Stripe Payment Link (resubscribe)
+//   - Anything else → open the retention interstitial (existing flow)
+window.handleManageSubscription = function() {
+  if (shopSubscription.status === 'cancelled') {
+    window.open(STRIPE_RESUBSCRIBE_URL, '_blank');
+    return;
+  }
+  openCancelInterstitial();
+};
+
+// Step 1 of cancel flow — open the retention interstitial.
+// Two equally-weighted buttons: Email support (mailto) or Continue to cancel.
+window.openCancelInterstitial = function() {
+  if (!shopSubscription.stripeCustomerId) {
+    // Defensive: an iOS-only subscriber on web (rare — they'd have to log
+    // into the web dashboard) has no Stripe customer record. The portal
+    // call would 400. Tell them where to go instead.
+    showToast('No web subscription on file. Manage from the iOS app or email support@upnext-app.com.');
+    return;
+  }
+  openModal('cancel-interstitial-modal');
+};
+
+// Step 2 of cancel flow — actually call the Cloud Function and redirect to
+// the Stripe Customer Portal. Stripe handles cancellation, plan changes,
+// invoices, and payment methods from there.
+window.continueToCancel = async function() {
+  const btn = document.getElementById('continue-cancel-btn');
+  const originalLabel = btn ? btn.textContent : 'Continue to cancel';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Opening…';
+  }
+
+  try {
+    const callable = httpsCallable(functions, 'createBillingPortalSession');
+    const result = await callable({}); // no payload — server reads identity from auth context
+    const url = result?.data?.url;
+    if (!url) {
+      throw new Error('No portal URL returned');
+    }
+    closeModal('cancel-interstitial-modal');
+    window.location.href = url;
+  } catch (err) {
+    console.error('[continueToCancel] Portal call failed:', err);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+    // Stripe portal misconfigurations (Dashboard → Customer Portal not set up)
+    // surface as a generic Cloud Functions internal error. Send the user
+    // somewhere useful instead of a dead-end alert.
+    showToast("Couldn't open the billing portal. Email support@upnext-app.com and we'll handle it.");
+  }
 };
 
 // Sign the owner out of Firebase auth

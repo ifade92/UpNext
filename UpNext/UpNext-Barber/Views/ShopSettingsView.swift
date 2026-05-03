@@ -200,6 +200,12 @@ struct AccountSettingsView: View {
     // Notification preference — initialized from appUser, updated locally on toggle
     @State private var notificationsEnabled: Bool = true
 
+    // Subscription state — drives the SUBSCRIPTION section's labels and
+    // the App Store vs Stripe branching for the Manage button.
+    // Pattern mirrors PaywallView.
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
+    @EnvironmentObject var authViewModel: AuthViewModel
+
     // Password reset state
     @State private var showResetAlert: Bool = false
     @State private var resetEmail: String = ""
@@ -254,6 +260,11 @@ struct AccountSettingsView: View {
                     }
                     .background(Color.brandInput)
                     .cornerRadius(14)
+
+                    // ── Subscription ──────────────────────────────────────
+                    // Hidden for non-subscribers (defensive — section only makes
+                    // sense for users who actually have an active subscription).
+                    subscriptionSection
 
                     // ── Notifications ─────────────────────────────────────
                     sectionLabel("NOTIFICATIONS")
@@ -395,6 +406,192 @@ struct AccountSettingsView: View {
             Spacer()
         }
         .padding(.top, 4)
+    }
+
+    // MARK: - Subscription Section
+
+    /// SUBSCRIPTION block. Always rendered for owners reaching this Settings
+    /// screen — anyone here has bypassed the paywall (subscribed or DEBUG)
+    /// and benefits from seeing their plan / Manage / Resubscribe path.
+    /// We don't gate on `shop?.subscriptionStatus` because the Shop decoder
+    /// can fail silently if a Firestore field is missing or unrecognized,
+    /// which would leave this whole section invisible for no obvious reason.
+    @ViewBuilder
+    private var subscriptionSection: some View {
+        sectionLabel("SUBSCRIPTION")
+
+        VStack(spacing: 0) {
+            // Plan label (read-only)
+            infoRow(icon: "creditcard.fill", title: "Plan", value: planLabel)
+            Divider().background(Color.gray.opacity(0.15)).padding(.leading, 62)
+
+            // Status (read-only)
+            infoRow(icon: "checkmark.seal.fill", title: "Status", value: statusLabel)
+            Divider().background(Color.gray.opacity(0.15)).padding(.leading, 62)
+
+            // Action row — Manage or Resubscribe depending on state
+            actionRow
+        }
+        .background(Color.brandInput)
+        .cornerRadius(14)
+
+        // Refund / cross-platform note. Apple owns iOS refunds — we can't
+        // process them ourselves, and the App Store rules require us to
+        // direct iOS users to Apple for refunds.
+        Text("Within 30 days of purchase? Email support@upnext-app.com for a refund. iOS purchases must be refunded via Apple.")
+            .font(.caption2)
+            .foregroundColor(.gray)
+            .multilineTextAlignment(.leading)
+            .padding(.horizontal, 4)
+            .padding(.top, 2)
+    }
+
+    /// True when the shop's Stripe subscription is in the cancelled terminal
+    /// state — they need a Resubscribe path back into the funnel, not a
+    /// Manage Subscription path. App Store-cancelled users don't reach this
+    /// branch because they get paywalled before they can open Settings.
+    private var isCancelledStripeShop: Bool {
+        !subscriptionManager.isSubscribed
+            && authViewModel.shop?.subscriptionStatus == .cancelled
+    }
+
+    /// Plan label — App Store path derives from RevenueCat (because the
+    /// shop doc may be stale due to the iOS→Firestore sync gap). Stripe path
+    /// reads straight from `shop.subscriptionTier`.
+    private var planLabel: String {
+        if subscriptionManager.isSubscribed {
+            // App Store path
+            let tierName = subscriptionManager.isMultiLocation ? "Multi-Location" : "Single Location"
+            return "App Store · \(tierName)"
+        }
+        // Stripe path — pull from shop doc
+        if let tier = authViewModel.shop?.subscriptionTier {
+            let price = String(format: "$%.2f", tier.monthlyPrice)
+            return "\(tier.displayName) · \(price)/month"
+        }
+        return "—"
+    }
+
+    /// Status label — App Store: always "Active" (we only render this section
+    /// if `isSubscribed == true`, so by definition it's active). Stripe: read
+    /// the live status off the shop doc.
+    private var statusLabel: String {
+        if subscriptionManager.isSubscribed {
+            return "Active"
+        }
+        guard let status = authViewModel.shop?.subscriptionStatus else { return "—" }
+        switch status {
+        case .active:    return "Active"
+        case .pastDue:   return "Past due"
+        case .cancelled: return "Cancelled"
+        case .trial:     return "Trial"
+        }
+    }
+
+    /// Action row — branches on subscription state:
+    ///   - Stripe cancelled → "Resubscribe" → opens web signup page
+    ///   - App Store active → "Manage" via Apple's native sheet (preferred when both flags set)
+    ///   - Stripe active / trial / pastDue → "Manage" via web (Stripe portal)
+    @ViewBuilder
+    private var actionRow: some View {
+        if isCancelledStripeShop {
+            // Cancelled Stripe sub → fresh resubscribe via web. The Stripe
+            // Customer Portal doesn't reliably offer "renew" once a sub is
+            // fully ended, so we route to the same signup flow they used
+            // originally.
+            Button(action: {
+                if let url = URL(string: "https://upnext-app.com/signup.html") {
+                    UIApplication.shared.open(url)
+                }
+            }) {
+                manageRowContent(
+                    icon: "arrow.clockwise.circle.fill",
+                    title: "Resubscribe",
+                    subtitle: "Reactivate your subscription on the web"
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+        } else if subscriptionManager.isSubscribed {
+            // App Store path → Apple's native sheet
+            Button(action: {
+                Task { await subscriptionManager.manageAppStoreSubscription() }
+            }) {
+                manageRowContent(
+                    icon: "creditcard.fill",
+                    title: "Manage Subscription",
+                    subtitle: "Cancel or change plan via Apple"
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+        } else {
+            // Stripe active / trial / pastDue → bounce to web for portal
+            Button(action: {
+                if let url = URL(string: "https://upnext-app.com/barber.html") {
+                    UIApplication.shared.open(url)
+                }
+            }) {
+                manageRowContent(
+                    icon: "globe",
+                    title: "Manage Subscription",
+                    subtitle: "Your subscription is managed on the web"
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+    }
+
+    /// Shared row layout for the Manage action — keeps both branches visually
+    /// identical to the other tappable rows in this view (e.g. Reset Password).
+    private func manageRowContent(icon: String, title: String, subtitle: String) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.accent.opacity(0.12))
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(.accent)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.gray.opacity(0.4))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+
+    /// Read-only info row used for Plan / Status display.
+    private func infoRow(icon: String, title: String, value: String) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.accent.opacity(0.12))
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(.accent)
+            }
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            Spacer()
+            Text(value)
+                .font(.caption)
+                .foregroundColor(.gray)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
     }
 }
 
