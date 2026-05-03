@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Support — UpNext</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0D0D0D;
+      --surface: #1A1A1A;
+      --accent: #2ECC71;
+      --accent-dark: #1BA355;
+      --text: #FFFFFF;
+      --text-2: rgba(255,255,255,0.6);
+      --text-3: rgba(255,255,255,0.35);
+      --border: rgba(255,255,255,0.08);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.7;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo-shapes { display: flex; flex-direction: column; gap: 3px; }
+    .logo-dot       { width: 9px;  height: 9px;   background: #1BA355; border-radius: 50%; }
+    .logo-bar-wide  { width: 20px; height: 3.5px; background: #2ECC71; border-radius: 2px; }
+    .logo-bar-short { width: 13px; height: 3.5px; background: #1BA355; border-radius: 2px; }
+    .logo-text { font-size: 17px; font-weight: 700; letter-spacing: -0.4px; }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+      margin-bottom: 8px;
+    }
+
+    .lede {
+      font-size: 16px;
+      color: var(--text-2);
+      margin-bottom: 32px;
+    }
+
+    .contact-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 24px;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .contact-card .label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-3);
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .contact-card a.email {
+      display: inline-block;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: -0.3px;
+    }
+
+    .contact-card a.email:hover {
+      color: var(--accent-dark);
+    }
+
+    .contact-card .response-note {
+      font-size: 13px;
+      color: var(--text-3);
+      margin-top: 12px;
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 36px;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+
+    .faq-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 12px;
+    }
+
+    .faq-item .q {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .faq-item .a {
+      font-size: 14px;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+
+    .faq-item .a + .a {
+      margin-top: 8px;
+    }
+
+    a.inline { color: var(--accent); text-decoration: none; }
+    a.inline:hover { text-decoration: underline; }
+
+    .footer-links {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 24px;
+      font-size: 13px;
+      color: var(--text-3);
+    }
+
+    .footer-links a {
+      color: var(--text-2);
+      text-decoration: none;
+    }
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-shapes">
+    <div class="logo-dot"></div>
+    <div class="logo-bar-wide"></div>
+    <div class="logo-bar-short"></div>
+  </div>
+  <span class="logo-text">Up<span style="color:#27AE60;">Next</span></span>
+</div>
+
+<div class="container">
+  <h1>Get Help</h1>
+  <p class="lede">Running into something tricky? We're a small team and we read every email. Most issues get sorted same day.</p>
+
+  <div class="contact-card">
+    <div class="label">Email Support</div>
+    <a href="mailto:support@upnext-app.com?subject=UpNext%20Support" class="email">support@upnext-app.com</a>
+    <div class="response-note">We typically reply within one business day.</div>
+  </div>
+
+  <h2>Quick answers</h2>
+
+  <div class="faq-item">
+    <div class="q">How do I cancel my subscription?</div>
+    <div class="a"><strong style="color:var(--text);">On the iOS app:</strong> Settings → Account → Manage Subscription. App Store cancellations go through Apple's native sheet.</div>
+    <div class="a"><strong style="color:var(--text);">On the web:</strong> Sign in at <a href="https://upnext-app.com/barber.html" class="inline">upnext-app.com</a> → Settings → Subscription → Manage Subscription. You'll be sent to Stripe's billing portal where you can cancel.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="q">How do refunds work?</div>
+    <div class="a">UpNext offers a 30-day money-back guarantee. If you're within that window and want a refund, email us at <a href="mailto:support@upnext-app.com" class="inline">support@upnext-app.com</a> with your shop name and we'll take care of it.</div>
+    <div class="a"><strong style="color:var(--text);">iOS purchases</strong> are processed by Apple, so refunds for App Store subscriptions have to go through them at <a href="https://reportaproblem.apple.com" class="inline">reportaproblem.apple.com</a>.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="q">Something's not working — what do I do?</div>
+    <div class="a">Email us with your shop name and a quick description of what's happening. A screenshot helps a lot if you can grab one. We'll get back to you within a business day.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="q">How do I add or remove a barber?</div>
+    <div class="a">Owners can manage barbers from Settings → Barbers in either the iOS app or the web dashboard. Each barber gets their own login via the shop code under Settings → Shop.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="q">Where can I read your terms or privacy policy?</div>
+    <div class="a"><a href="/terms.html" class="inline">Terms of Service</a> · <a href="/privacy.html" class="inline">Privacy Policy</a></div>
+  </div>
+
+  <div class="footer-links">
+    <a href="/">Home</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+  </div>
+</div>
+
+</body>
+</html>
